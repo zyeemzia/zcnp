@@ -443,3 +443,8 @@ dl.vf dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .gsi-slot { min-height: 44px; display: flex; align-items: center; }
 /* Google's button frame is a light document: match its colour scheme so dark mode shows no white box */
 .gsi-slot iframe { color-scheme: light; }
+
+/* long track names wrap to at most two lines instead of pushing the header tools off-screen */
+.brand-text { min-width: 0; }
+.brand-text b { max-width: 12em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 1280px) { .brand-text b { max-width: 9em; } .brand-text small { display: none; } }

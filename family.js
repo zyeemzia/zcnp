@@ -7,4 +7,12 @@ window.ZZ_FAMILY = [
   { code: 'ZCDE', name: 'Certified Design Expert', domain: 'zcde.zyeemzia.com', path: 'Networking', tier: 4, level: 'Design Expert', blurb: 'Requirements-driven network design across campus, WAN, cloud and security.' },
   { code: 'ZPMP', name: 'Project Management Protocol', domain: 'zpmp.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Value-driven, agile and hybrid project management with AI.' },
   { code: 'ZAIA', name: 'Artificial Intelligence Architecture', domain: 'zaia.zyeemzia.com', path: 'AI', tier: 3, level: 'Architect', blurb: 'Design production AI systems: data, models, RAG, agents and trust.' }
+  { code: 'ZITIL Master', name: 'Information Technology Infrastructure Library Master', domain: 'zitil.zyeemzia.com', path: 'Service Management', tier: 4, level: 'Master', blurb: 'Master-level IT service management: value system, practices, high-velocity IT and strategy.' },
+  { code: 'ZCSS', name: 'Cybersecurity Specialization', domain: 'zcss.zyeemzia.com', path: 'Cybersecurity', tier: 2, level: 'Professional', blurb: 'Hands-on security: networks, identity, cloud, AppSec, SOC and incident response.' },
+  { code: 'ZAIG', name: 'AI Governance', domain: 'zaig.zyeemzia.com', path: 'AI', tier: 2, level: 'Professional', blurb: 'Responsible AI: regulation, risk and impact assessment, oversight and assurance.' },
+  { code: 'ZCSTG', name: 'Cyber Security – Technology and Governance', domain: 'zcstg.zyeemzia.com', path: 'Cybersecurity', tier: 3, level: 'Expert', blurb: 'Security technology meets governance: GRC, risk quantification, zero trust and resilience.' },
+  { code: 'ZMLS', name: 'Machine Learning Specialization', domain: 'zmls.zyeemzia.com', path: 'AI', tier: 2, level: 'Professional', blurb: 'Practical ML: maths, models, evaluation, deep learning and MLOps.' },
+  { code: 'ZEPMS', name: 'Engineering Project Management Specialization', domain: 'zepms.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Engineering projects: CPM, earned value, contracts, HSE and handover.' },
+  { code: 'ZITSS', name: 'IT Support Specialization', domain: 'zitss.zyeemzia.com', path: 'IT Operations', tier: 1, level: 'Associate', blurb: 'Job-ready IT support: hardware, OS, networking, troubleshooting and admin.' },
+  { code: 'ZHRLS', name: 'Human Resource Management and Leadership Specialization', domain: 'zhrls.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Modern HR and people leadership: hiring, performance, pay, culture and analytics.' },
 ];
