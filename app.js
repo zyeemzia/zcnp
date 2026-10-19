@@ -376,7 +376,7 @@
       const n = Math.min(M.examSize || 40, D.exam.length);
       // stratified draw: proportional to each module's share of the bank, topped up from the rest
       const byMod = {}; D.exam.forEach((q, i) => (byMod[q.module] = byMod[q.module] || []).push(i));
-      let pick = []; Object.values(byMod).forEach(ix => { pick = pick.concat(shuffle(ix).slice(0, Math.round(n * ix.length / D.exam.length))); });
+      let pick = []; if (M.examWeights) Object.entries(M.examWeights).forEach(([m, k]) => { pick = pick.concat(shuffle(byMod[m] || []).slice(0, k)); }); else Object.values(byMod).forEach(ix => { pick = pick.concat(shuffle(ix).slice(0, Math.round(n * ix.length / D.exam.length))); });
       pick = shuffle(pick).slice(0, n); if (pick.length < n) pick = pick.concat(shuffle(D.exam.map((_, i) => i).filter(i => !pick.includes(i))).slice(0, n - pick.length));
       EX = { mode: 'practice', qs: pick, ans: {}, flags: {}, i: 0, end: Date.now() + (M.examMinutes || 60) * 60e3, done: false };
       beginExam(); return;
