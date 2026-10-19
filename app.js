@@ -630,6 +630,23 @@
   }
   async function deleteAccount() { try { await api('/v1/me', null, { method: 'DELETE' }); signOutLocal('Your account and synced progress were deleted.'); } catch (e) { toast(e.message, 7000); } }
 
+  /* ---------------- contact: the shared ZyeemZia Direct Transmission Hub, loaded only when opened ---------------- */
+  const TX_BASE = 'https://zyeemzia.com/';
+  let txP = null;
+  const loadTransmit = () => window.ZZTransmit ? Promise.resolve() : txP || (txP = new Promise((res, rej) => {
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = TX_BASE + 'transmit.css?v=3'; document.head.appendChild(l);
+    const sc = document.createElement('script'); sc.src = TX_BASE + 'transmit.js?v=3'; sc.onload = () => res(); sc.onerror = () => { txP = null; rej(); }; document.head.appendChild(sc);
+  }));
+  function viewContact() {
+    return `<div class="page-head"><div class="eyebrow">Contact</div><h1 class="page-title">Talk to ZyeemZia</h1><p class="muted">Questions about ${esc(M.short)}, your certificate, the exam or a partnership? Send a message and the reply will come to your email.</p></div>
+      <section class="tx-mount" id="contact" data-tx-topic="academy" data-tx-dark='html[data-theme="dark"]' data-tx-light='html[data-theme="light"]' data-tx-auto="media"
+        data-tx-regarding="${esc(`${M.full} (${M.short})`)}" data-tx-source="${esc(M.domain)} · Course" data-tx-lead="Questions about this course, the official exam, your certificate or sign-in? Transmit a message straight to the ZyeemZia command desk."><p class="muted">Loading the contact form…</p></section>`;
+  }
+  function mountContact() {
+    loadTransmit().then(() => { const el = $('#view .tx-mount'); if (el && window.ZZTransmit) window.ZZTransmit.mount(el); })
+      .catch(() => { const el = $('#view .tx-mount'); if (el) el.innerHTML = '<p class="muted">The contact form could not load. Check your connection, or email admin@zyeemzia.com.</p>'; });
+  }
+
   /* ---------------- certificate ---------------- */
   const credId = () => (S.exam.passed && S.exam.passed.id) || '';
   const verifyURL = id => `https://${M.domain}/#verify/${encodeURIComponent(id)}`;
@@ -641,7 +658,7 @@
     return `<div class="page-head"><div class="eyebrow">${esc(M.short)} certificate</div><h1 class="page-title">${ok ? 'Your certificate is ready' : U ? 'Claim your certificate' : 'Unlock your certificate'}</h1><p class="muted">${ok ? 'Download it, add it to LinkedIn, or share its verification link: anyone can confirm it is genuine.' : U ? 'You passed the official exam. Type your name below to issue your certificate.' : 'Finish these steps to unlock your certificate. The preview below shows what you will receive.'}</p></div>
       <div class="req">${items.map(([t, s, done, href]) => `<a class="req-i ${done ? 'ok' : ''}" href="${href}" style="text-decoration:none;color:inherit"><span class="st">${done ? '✓' : ''}</span><span><b>${esc(t)}</b><br><small class="muted">${esc(s)}</small></span>${icon('arrowR')}</a>`).join('')}</div>
       ${U ? claimHTML() : ''}
-      ${ok ? `<div class="cert-tools"><p class="cert-name">Name on certificate: <b>${esc(P.name)}</b><br><small class="muted">The name is fixed once issued. To correct a spelling mistake, contact ZyeemZia with your credential ID.</small></p>
+      ${ok ? `<div class="cert-tools"><p class="cert-name">Name on certificate: <b>${esc(P.name)}</b><br><small class="muted">The name is fixed once issued. To correct a spelling mistake, <a href="#contact">contact ZyeemZia</a> with your credential ID.</small></p>
         <button class="btn btn-primary" type="button" data-certdl>${icon('download')} Download PNG</button>
         <a class="btn" id="lnBtn" href="${linkedinURL()}" target="_blank" rel="noopener">Add to LinkedIn</a>
         ${canUpgrade ? `<button class="btn" type="button" data-upgrade>Upgrade to Distinction</button>` : ''}</div>
@@ -753,8 +770,8 @@
     const [r, arg] = location.hash.slice(1).split('/');
     // a finished exam shows its result once; coming back later shows the exam start page again
     if (EX && EX.done && r !== 'exam' && !EX.unseen) EX = null;
-    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify, account: viewAccount }[r || ''] || notFound;
-    view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg); if (r === 'account') mountAccount();
+    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify, account: viewAccount, contact: viewContact }[r || ''] || notFound;
+    view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg); if (r === 'account') mountAccount(); if (r === 'contact') mountContact();
     const back = ev && !linkNav && scrollMem[location.hash || '#'] != null; linkNav = false;
     window.scrollTo({ top: back ? scrollMem[location.hash || '#'] : 0, behavior: 'auto' });
     if (ev && !reduced()) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); }
