@@ -147,19 +147,27 @@
     </div>
     ${academyHTML()}`;
   }
+  // every non-networking track grouped by its path, in a fixed reading order
+  function academyGroups(list) {
+    const NAMES = { Leadership: 'Leadership & management', AI: 'Artificial intelligence', Cybersecurity: 'Cybersecurity', 'Service Management': 'IT service management', 'IT Operations': 'IT operations & support' };
+    const order = Object.keys(NAMES), g = {};
+    list.forEach(f => (g[f.path] = g[f.path] || []).push(f));
+    return Object.keys(g).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).map(p => [NAMES[p] || p, g[p].sort((a, b) => a.tier - b.tier)]);
+  }
   function academyHTML() {
     const F = window.ZZ_FAMILY || []; if (!F.length) return '';
     const net = F.filter(f => f.path === 'Networking').sort((a, b) => a.tier - b.tier), other = F.filter(f => f.path !== 'Networking');
-    const card = f => {
+    const card = (f, pathName) => {
       const me = f.code === M.code || f.domain === M.domain;
-      const inner = `<span class="ac-lv">${esc(f.level)}</span><b>${esc(f.code)}</b><span class="ac-n">ZyeemZia™ ${esc(f.name)}</span><small>${esc(f.blurb)}</small>`;
+      const inner = `<span class="ac-lv">${pathName ? esc(pathName) + ' · ' : ''}${esc(f.level)}</span><b>${esc(f.code)}</b><span class="ac-n">ZyeemZia™ ${esc(f.name)}</span><small>${esc(f.blurb)}</small>`;
       if (f.soon && !me) return `<div class="ac-card soon" aria-label="${esc(f.code)}, coming soon">${inner}<span class="chip">Coming soon</span></div>`;
       return `<a class="ac-card ${me ? 'me' : ''}" href="${me ? '#home' : 'https://' + f.domain + '/'}" ${me ? '' : 'target="_blank" rel="noopener"'}>${inner}${me ? '<span class="chip acc">You are here</span>' : ''}</a>`;
     };
     const tiers = [1, 2, 3, 4].map(t => net.filter(f => f.tier === t)).filter(x => x.length);
+    const groups = academyGroups(other);
     return `<h2 class="section-title">ZyeemZia™ Academy <small>certification paths</small></h2>
-      <div class="academy"><div class="ac-path"><div class="eyebrow">Networking ladder</div><div class="ac-ladder">${tiers.map(g => `<div class="ac-tier">${g.map(card).join('')}</div>`).join('<span class="ac-arrow" aria-hidden="true">→</span>')}</div></div>
-        <div class="ac-path"><div class="eyebrow">Leadership & AI</div><div class="ac-ladder ac-other">${other.map(card).join('')}</div></div></div>`;
+      <div class="academy"><div class="ac-path ac-net"><div class="eyebrow">Networking ladder</div><div class="ac-ladder">${tiers.map(g => `<div class="ac-tier">${g.map(f => card(f)).join('')}</div>`).join('<span class="ac-arrow" aria-hidden="true">→</span>')}</div></div>
+        <div class="ac-path"><div class="eyebrow">More certification paths</div><div class="ac-grid">${groups.map(([name, list]) => list.map(f => card(f, name)).join('')).join('')}</div></div></div>`;
   }
   function bookBanner() {
     return `<section class="book-banner">

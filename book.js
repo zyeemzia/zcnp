@@ -111,14 +111,20 @@
       <div class="cert-meta"><div>Issued<span></span></div><div>Credential ID<span></span></div></div>
       <p class="hint">Earn the official certificate online at ${esc(M.domain)}: complete every lesson and pass the official exam. Anyone can verify your credential ID at ${esc(M.domain)}/#verify. This page is for your printed record.</p></div></div></section>`;
   }
+  function groups(list) {
+    const NAMES = { Leadership: 'Leadership & management', AI: 'Artificial intelligence', Cybersecurity: 'Cybersecurity', 'Service Management': 'IT service management', 'IT Operations': 'IT operations & support' };
+    const order = Object.keys(NAMES), g = {};
+    list.forEach(f => (g[f.path] = g[f.path] || []).push(f));
+    return Object.keys(g).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).map(p => [NAMES[p] || p, g[p].sort((a, b) => a.tier - b.tier)]);
+  }
   function academy() {
     const F = window.ZZ_FAMILY || []; if (!F.length) return '';
     const net = F.filter(f => f.path === 'Networking').sort((a, b) => a.tier - b.tier), other = F.filter(f => f.path !== 'Networking');
     const card = f => `<div class="ac ${f.code === M.code ? 'me' : ''} ${f.soon && f.code !== M.code ? 'soon' : ''}"><span>${esc(f.level)}</span><b>${esc(f.code)}</b><small>ZyeemZia™ ${esc(f.name)}</small><em>${f.soon && f.code !== M.code ? 'Coming soon' : esc(f.domain)}</em></div>`;
     return `<section class="flow"><div class="eyebrow">ZyeemZia™ Academy</div><h1 class="h-page">Your certification path</h1>
-      <p>Each ZyeemZia™ track stands on its own, and together they form a path from first network to expert design, plus leadership and AI architecture. Take the next step at the sites below.</p>
+      <p>Each ZyeemZia™ track stands on its own. Together they form a networking ladder from first network to expert design, plus paths in leadership, artificial intelligence, cybersecurity, IT service management and IT support. Take the next step at the sites below.</p>
       <h3 class="b-title">Networking ladder</h3><div class="ac-row">${net.map(card).join('<i>→</i>')}</div>
-      <h3 class="b-title">Leadership & AI</h3><div class="ac-row">${other.map(card).join('')}</div></section>`;
+      ${groups(other).map(([name, list]) => `<h3 class="b-title">${esc(name)}</h3><div class="ac-row">${list.map(card).join('')}</div>`).join('')}</section>`;
   }
   function subnetKey() {
     if (!D.lessons.some(l => l.blocks.some(b => b.type === 'tool'))) return '';
