@@ -9,7 +9,7 @@
 
   /* ---------------- state ---------------- */
   const KEY = M.storeKey || 'zz-track';
-  const defaults = () => ({ theme: 'auto', done: {}, quiz: {}, checks: {}, notes: {}, cells: {}, sc: {}, srs: {}, exam: { best: 0, attempts: 0, passed: null, history: [] }, cap: { deliv: {}, rubric: {}, notes: '' }, name: '', xp: 0 });
+  const defaults = () => ({ theme: 'auto', done: {}, quiz: {}, checks: {}, notes: {}, cells: {}, sc: {}, srs: {}, exam: { v: 2, best: 0, attempts: 0, passed: null, history: [], pbest: 0 }, cap: { deliv: {}, rubric: {}, notes: '' }, name: '', xp: 0 });
   // load saved progress defensively: older or partial saves must never break a page
   function loadState() {
     let saved = {};
@@ -20,11 +20,16 @@
       if (dv && typeof dv === 'object') { if (!v || typeof v !== 'object' || Array.isArray(v)) s[k] = dv; }
       else if (typeof v !== typeof dv) s[k] = dv;
     });
+    // exams before version 2 were graded in the browser: they only count as practice now
+    const legacy = !(s.exam && s.exam.v === 2);
     s.exam = Object.assign(defaults().exam, s.exam);
+    if (legacy) s.exam = Object.assign(defaults().exam, { pbest: typeof s.exam.best === 'number' ? s.exam.best : 0 });
     if (!Array.isArray(s.exam.history)) s.exam.history = [];
-    if (typeof s.exam.best !== 'number') s.exam.best = 0;
-    if (typeof s.exam.attempts !== 'number') s.exam.attempts = 0;
-    if (s.exam.passed && (typeof s.exam.passed !== 'object' || !s.exam.passed.date)) s.exam.passed = null;
+    ['best', 'attempts', 'pbest'].forEach(k => { if (typeof s.exam[k] !== 'number') s.exam[k] = 0; });
+    const P = s.exam.passed;
+    if (P && (typeof P !== 'object' || !P.v || !P.id || !P.name || !P.date)) s.exam.passed = null;
+    const U = s.exam.unclaimed;
+    if (U && (typeof U !== 'object' || typeof U.attempt !== 'string')) delete s.exam.unclaimed;
     s.cap = Object.assign(defaults().cap, s.cap);
     ['deliv', 'rubric'].forEach(k => { if (!s.cap[k] || typeof s.cap[k] !== 'object') s.cap[k] = {}; });
     if (typeof s.cap.notes !== 'string') s.cap.notes = '';
@@ -73,9 +78,10 @@
   const modProg = m => { const n = m.lessons.length, d = m.lessons.filter(l => S.done[l.id]).length; return { n, d, p: n ? Math.round(d / n * 100) : 0 }; };
   const nextLesson = () => D.lessons.find(l => !S.done[l.id]) || D.lessons[0];
   const capDone = () => { const c = M.capstone || {}; return (c.deliverables || []).every((_, i) => S.cap.deliv[i]); };
-  const req = () => ({ lessons: D.lessons.length > 0 && doneCount() === D.lessons.length, exam: S.exam.best >= (M.passMark || 80), capstone: capDone() });
-  const eligible = () => { const r = req(); return r.lessons && r.exam; };
-  const distinction = () => eligible() && S.exam.best >= (M.distinctionMark || 90) && capDone();
+  const req = () => ({ lessons: D.lessons.length > 0 && doneCount() === D.lessons.length, exam: !!(S.exam.passed && S.exam.passed.v), capstone: capDone() });
+  // a certificate restored from another device by its credential ID does not need this device's lesson history
+  const eligible = () => { const r = req(); return r.exam && (r.lessons || !!S.exam.passed.restored); };
+  const distinction = () => eligible() && !!S.exam.passed.distinction;
 
   /* ---------------- chrome ---------------- */
   const NAV = [['home', 'Home', '#home', 'home'], ['modules', 'Modules', '#modules', 'modules'], ['practice', 'Practice', '#practice', 'practice'], ['exam', 'Exam', '#exam', 'exam'], ['capstone', 'Capstone', '#capstone', 'capstone'], ['certificate', 'Certificate', '#certificate', 'cert']];
@@ -98,7 +104,7 @@
     const steps = [
       ['01', 'Learn', `${doneCount()}/${D.lessons.length} lessons`, r.lessons],
       ['02', 'Practise', `${D.terms.length} flashcards · module drills`, S.exam.attempts > 0 || Object.keys(S.srs).length > 10],
-      ['03', 'Certify', S.exam.best ? `Best exam score ${S.exam.best}%` : `Exam: ${M.examSize} questions, pass ${M.passMark}%`, r.exam],
+      ['03', 'Certify', S.exam.passed ? `Certified with ${S.exam.passed.score}%` : S.exam.best ? `Best official score ${S.exam.best}%` : `Official exam: ${M.examSize} questions, pass ${M.passMark}%`, r.exam],
       ['04', 'Get certificate', eligible() ? (distinction() ? 'Unlocked · with Distinction' : 'Unlocked') : 'Unlocks after lessons + exam', eligible()]
     ];
     const nowIdx = steps.findIndex(s => !s[3]);
@@ -313,45 +319,84 @@
   /* ---------------- certification exam ---------------- */
   // a running exam is saved on every change, so refreshes, crashes or a phone discarding the tab never lose it
   const EXKEY = KEY + ':exam';
-  let EX = null, exTimer = 0;
-  const saveEX = () => { try { if (EX && !EX.done) localStorage.setItem(EXKEY, JSON.stringify({ qs: EX.qs, ans: EX.ans, flags: EX.flags, i: EX.i, end: EX.end })); else localStorage.removeItem(EXKEY); } catch (e) { /* ignore */ } };
+  /* ---------------- exam ----------------
+     official: questions come from a secret bank on the ZyeemZia server, which also runs the clock and grades;
+     practice: the public bank, graded here, with full answer review. Only official passes earn a certificate. */
+  const SLUG = M.slug || KEY.replace(/\.v\d+$/, '');
+  const API = (() => { try { return localStorage.getItem('zz.api') || ''; } catch (e) { return ''; } })() || M.api || 'https://api.zyeemzia.com';
+  async function api(path, body, opts) {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 25000); let res;
+    try { res = await fetch(API + path, Object.assign(body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}, { signal: ctl.signal }, opts || {})); }
+    catch (e) { throw Object.assign(new Error('Could not reach the ZyeemZia exam server. Check your internet connection and try again.'), { offline: true }); }
+    finally { clearTimeout(t); }
+    let j = {}; try { j = await res.json(); } catch (e) { /* no body */ }
+    if (!res.ok) throw Object.assign(new Error(j.error || 'The exam server had a problem. Please try again.'), { status: res.status });
+    return j;
+  }
+  let EX = null, exTimer = 0, syncT = 0, exStarting = false;
+  const official = () => !!(EX && EX.mode === 'official');
+  const exQ = k => official() ? EX.items[k] : D.exam[EX.qs[k]];
+  const onExamPage = () => location.hash.split('/')[0] === '#exam';
+  const saveEX = () => { try { if (EX && !EX.done) localStorage.setItem(EXKEY, JSON.stringify({ mode: EX.mode, attempt: EX.attempt, items: EX.items, qs: EX.qs, ans: EX.ans, flags: EX.flags, i: EX.i, end: EX.end })); else localStorage.removeItem(EXKEY); } catch (e) { /* ignore */ } };
   function restoreEX() {
     let r = null; try { r = JSON.parse(localStorage.getItem(EXKEY) || 'null'); } catch (e) { r = null; }
-    if (!r || !Array.isArray(r.qs) || !r.qs.length || r.qs.some(i => !D.exam[i])) { try { localStorage.removeItem(EXKEY); } catch (e) { /* ignore */ } return; }
-    EX = { qs: r.qs, ans: r.ans || {}, flags: r.flags || {}, i: Math.min(r.i || 0, r.qs.length - 1), end: +r.end || Date.now(), done: false };
+    const isOff = !!(r && r.mode === 'official' && typeof r.attempt === 'string' && Array.isArray(r.items) && r.items.length && r.items.every(q => q && typeof q.q === 'string' && Array.isArray(q.options)));
+    const isPrac = !!(r && r.mode !== 'official' && Array.isArray(r.qs) && r.qs.length && r.qs.every(i => D.exam[i]));
+    if (!isOff && !isPrac) { try { localStorage.removeItem(EXKEY); } catch (e) { /* ignore */ } return; }
+    const n = isOff ? r.items.length : r.qs.length;
+    EX = { mode: isOff ? 'official' : 'practice', attempt: isOff ? r.attempt : undefined, items: isOff ? r.items : undefined, qs: isOff ? r.items.map((_, k) => k) : r.qs, ans: r.ans || {}, flags: r.flags || {}, i: Math.min(r.i || 0, n - 1), end: +r.end || Date.now(), done: false };
     if (EX.end <= Date.now()) { examSubmit(true, true); return; }
     exTimer = setInterval(tickExam, 1000);
   }
   function viewExam() {
     if (EX && !EX.done) return examHTML();
-    const last = S.exam.history[S.exam.history.length - 1];
-    return `<div class="exam-wrap"><div class="page-head"><div class="eyebrow">${esc(M.short)} certification exam</div><h1 class="page-title">Prove it</h1><p class="muted">Scenario-based questions drawn at random from the ${D.exam.length}-question bank across all ${D.modules.length} modules. You can flag questions and move freely between them before you submit. Your answers are saved as you go, so a refresh will not lose them.</p></div>
-      <div class="rules"><div><b>${Math.min(M.examSize, D.exam.length)}</b><span>questions</span></div><div><b>${M.examMinutes}</b><span>minutes</span></div><div><b>${M.passMark}%</b><span>to pass</span></div><div><b>${M.distinctionMark}%</b><span>for distinction</span></div></div>
-      ${!req().lessons ? `<div class="callout warning"><span class="ct">Before you start</span>You can take the exam any time for practice, but the certificate also needs every lesson completed (${doneCount()}/${D.lessons.length} so far).</div>` : ''}
-      <div class="hero-actions"><button class="btn btn-primary" type="button" data-exstart ${D.exam.length ? '' : 'disabled'}>${icon('exam')} ${S.exam.attempts ? 'Start a new attempt' : 'Start the exam'}</button><a class="btn" href="#practice">Warm up with drills</a></div>
-      ${S.exam.attempts ? `<div class="card list-card"><div class="eyebrow">Your record</div><p>Attempts: <b>${S.exam.attempts}</b> · Best score: <b>${S.exam.best}%</b>${last ? ` · Last: ${last.score}% on ${esc(last.date)}` : ''}${S.exam.passed ? ` · <span class="chip ok">Passed ${esc(S.exam.passed.date)}</span>` : ''}</p></div>` : ''}</div>`;
-  }
-  function examStart() {
+    const last = S.exam.history[S.exam.history.length - 1]; const lessonsOk = req().lessons; const P = S.exam.passed;
     const n = Math.min(M.examSize || 40, D.exam.length);
-    // stratified draw: proportional to each module's share of the bank, topped up from the rest
-    const byMod = {}; D.exam.forEach((q, i) => (byMod[q.module] = byMod[q.module] || []).push(i));
-    let pick = []; Object.values(byMod).forEach(ix => { pick = pick.concat(shuffle(ix).slice(0, Math.round(n * ix.length / D.exam.length))); });
-    pick = shuffle(pick).slice(0, n); if (pick.length < n) pick = pick.concat(shuffle(D.exam.map((_, i) => i).filter(i => !pick.includes(i))).slice(0, n - pick.length));
-    EX = { qs: pick, ans: {}, flags: {}, i: 0, end: Date.now() + (M.examMinutes || 60) * 60e3, done: false };
-    saveEX(); clearInterval(exTimer); exTimer = setInterval(tickExam, 1000);
-    if (location.hash !== '#exam') location.hash = '#exam'; else paintExam('.opt');
+    return `<div class="exam-wrap"><div class="page-head"><div class="eyebrow">${esc(M.short)} certification exam</div><h1 class="page-title">Prove it</h1><p class="muted">The <b>official exam</b> earns your certificate. Its questions come from a secret bank and are graded on the ZyeemZia server, so anyone can verify your credential. The <b>practice exam</b> uses the public question bank and explains every answer.</p></div>
+      <div class="rules"><div><b>${M.examSize}</b><span>questions</span></div><div><b>${M.examMinutes}</b><span>minutes</span></div><div><b>${M.passMark}%</b><span>to pass</span></div><div><b>${M.distinctionMark}%</b><span>for distinction</span></div></div>
+      <div class="two exam-modes">
+        <div class="card list-card"><div class="eyebrow">Official exam · earns the certificate</div><p>${M.examSize} questions from a secret bank, shuffled for every attempt. The clock runs on the server and your answers are saved as you go, so a refresh or a dropped connection will not lose them. Needs an internet connection.</p>
+          ${lessonsOk ? '' : `<div class="callout warning"><span class="ct">Locked</span>Finish every lesson to unlock the official exam (${doneCount()}/${D.lessons.length} so far). Meanwhile, take the practice exam.</div>`}
+          <div class="hero-actions"><button class="btn btn-primary" type="button" data-exstart="official" ${lessonsOk ? '' : 'disabled'}>${icon('exam')} ${S.exam.attempts ? 'Start a new official attempt' : 'Start the official exam'}</button></div></div>
+        <div class="card list-card"><div class="eyebrow">Practice exam · no certificate</div><p>${n} questions from the public ${D.exam.length}-question bank, with the same timer and pass mark. Afterwards, review every answer with its explanation. Works offline.</p>
+          <div class="hero-actions"><button class="btn" type="button" data-exstart="practice" ${D.exam.length ? '' : 'disabled'}>Start a practice exam</button><a class="btn" href="#practice">Module drills</a></div></div>
+      </div>
+      ${S.exam.attempts || P ? `<div class="card list-card"><div class="eyebrow">Your official record</div><p>Attempts: <b>${S.exam.attempts}</b> · Best score: <b>${S.exam.best}%</b>${last ? ` · Last: ${last.score}% on ${esc(last.date)}` : ''}${S.exam.unclaimed ? ` · <a class="chip ok" href="#certificate">Passed: claim your certificate</a>` : P ? ` · <a class="chip ok" href="#certificate">Certified · ${esc(P.id)}</a>` : ''}</p></div>` : ''}</div>`;
   }
+  async function examStart(mode) {
+    if (mode !== 'official') {
+      const n = Math.min(M.examSize || 40, D.exam.length);
+      // stratified draw: proportional to each module's share of the bank, topped up from the rest
+      const byMod = {}; D.exam.forEach((q, i) => (byMod[q.module] = byMod[q.module] || []).push(i));
+      let pick = []; Object.values(byMod).forEach(ix => { pick = pick.concat(shuffle(ix).slice(0, Math.round(n * ix.length / D.exam.length))); });
+      pick = shuffle(pick).slice(0, n); if (pick.length < n) pick = pick.concat(shuffle(D.exam.map((_, i) => i).filter(i => !pick.includes(i))).slice(0, n - pick.length));
+      EX = { mode: 'practice', qs: pick, ans: {}, flags: {}, i: 0, end: Date.now() + (M.examMinutes || 60) * 60e3, done: false };
+      beginExam(); return;
+    }
+    if (exStarting) return;
+    if (!req().lessons) { toast('Finish every lesson to unlock the official exam.'); return; }
+    exStarting = true; $$('[data-exstart="official"]').forEach(b => { b.disabled = true; b.textContent = 'Preparing your exam…'; });
+    try {
+      const j = await api('/v1/exam/start', { track: SLUG });
+      EX = { mode: 'official', attempt: j.attempt, items: j.questions, qs: j.questions.map((_, k) => k), ans: {}, flags: {}, i: 0, end: Date.now() + (j.ends - j.now), done: false };
+      beginExam();
+    } catch (e) {
+      toast(e.message, 7000); if (onExamPage() && !(EX && !EX.done)) view.innerHTML = EX && EX.result ? examResultHTML() : viewExam();
+    } finally { exStarting = false; }
+  }
+  function beginExam() { saveEX(); clearInterval(exTimer); exTimer = setInterval(tickExam, 1000); if (location.hash !== '#exam') location.hash = '#exam'; else paintExam('.opt'); }
   function tickExam() {
     if (!EX || EX.done) { clearInterval(exTimer); return; }
     const left = Math.max(0, EX.end - Date.now()); const el = $('#exTime');
     if (el) { const m = Math.floor(left / 60e3), s = Math.floor(left / 1000) % 60; el.textContent = `${m}:${String(s).padStart(2, '0')}`; el.classList.toggle('low', left < 5 * 60e3); }
-    if (left <= 0) examSubmit(true);
+    if (left <= 0) { clearInterval(exTimer); examSubmit(true); }
   }
   const answeredN = () => Object.keys(EX.ans).length;
   function examHTML() {
-    const q = D.exam[EX.qs[EX.i]]; const a = EX.ans[EX.i]; const answered = answeredN();
+    const q = exQ(EX.i); const a = EX.ans[EX.i]; const answered = answeredN();
     return `<div class="exam-wrap"><div class="exam-bar" role="status"><span>Question ${EX.i + 1}/${EX.qs.length}</span><span id="exAnswered">${answered} answered</span><span>⏱ <span class="timer" id="exTime" aria-label="Time left">–</span></span></div>
-      <section class="quiz" aria-labelledby="exQ"><div class="eyebrow">${esc((D.modules.find(m => m.id === q.module) || {}).code || '')}</div><div class="q-text" id="exQ" tabindex="-1">${md(q.q)}</div>
+      ${official() && EX.pending ? `<div class="callout warning" role="alert"><span class="ct">Not submitted yet</span>${esc(EX.pending)} Your answers are safe on this device.<div class="hero-actions" style="margin-top:8px"><button class="btn btn-sm btn-primary" type="button" data-exconfirm>Try again</button></div></div>` : ''}
+      <section class="quiz" aria-labelledby="exQ"><div class="eyebrow">${official() ? 'Official exam' : 'Practice exam'} · ${esc((D.modules.find(m => m.id === q.module) || {}).code || '')}</div><div class="q-text" id="exQ" tabindex="-1">${md(q.q)}</div>
         <div class="opts" role="group" aria-label="Answer options">${q.options.map((o, k) => `<button class="opt ${a === k ? 'sel' : ''}" type="button" data-exans="${k}" aria-pressed="${a === k}"><span class="k">${'ABCD'[k]}</span><span>${md(o)}</span></button>`).join('')}</div>
         <div class="q-foot" style="justify-content:space-between"><button class="btn btn-sm ${EX.flags[EX.i] ? 'btn-dark' : ''}" type="button" data-exflag aria-pressed="${!!EX.flags[EX.i]}">${icon('flag')} <span>${EX.flags[EX.i] ? 'Flagged' : 'Flag for review'}</span></button>
           <span style="display:flex;gap:8px"><button class="btn" type="button" data-exgo="${EX.i - 1}" ${EX.i ? '' : 'disabled'} aria-label="Previous question">${icon('arrowL')}</button>${EX.i + 1 < EX.qs.length ? `<button class="btn btn-primary" type="button" data-exgo="${EX.i + 1}">Next ${icon('arrowR')}</button>` : `<button class="btn btn-primary" type="button" data-exsubmit>Submit exam</button>`}</span></div></section>
@@ -361,8 +406,12 @@
   const qmapBtn = k => `<button type="button" data-exgo="${k}" class="${EX.ans[k] != null ? 'ans' : ''} ${EX.flags[k] ? 'flag' : ''} ${k === EX.i ? 'cur' : ''}" aria-label="Question ${k + 1}${EX.ans[k] != null ? ', answered' : ''}${EX.flags[k] ? ', flagged' : ''}" ${k === EX.i ? 'aria-current="step"' : ''}>${k + 1}</button>`;
   // repaint only the exam view (no scroll jump), then put focus where the learner expects it
   function paintExam(focusSel) { view.innerHTML = examHTML(); tickExam(); const f = focusSel && $(focusSel, view); if (f) f.focus({ preventScroll: true }); }
+  // official answers are also saved on the server, so time-up grading uses them even if this device goes offline
+  const syncSoon = () => { clearTimeout(syncT); syncT = setTimeout(syncEX, 3000); };
+  function syncEX(keepalive) { clearTimeout(syncT); if (!official() || EX.done) return; api('/v1/exam/save', { attempt: EX.attempt, answers: EX.ans }, keepalive ? { keepalive: true } : null).catch(() => { /* retried on the next answer and at submit */ }); }
   function examAnswer(k) {
-    EX.ans[EX.i] = k; saveEX();
+    if (Date.now() > EX.end) { toast('Time is up: submit to see your result.'); return; }
+    EX.ans[EX.i] = k; saveEX(); if (official()) syncSoon();
     $$('[data-exans]', view).forEach(b => { const on = +b.dataset.exans === k; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); });
     const m = $(`.qmap [data-exgo="${EX.i}"]`, view); if (m) m.outerHTML = qmapBtn(EX.i);
     [$('#exAnswered'), $('#exAnswered2')].forEach((el, j) => { if (el) el.textContent = j ? answeredN() : answeredN() + ' answered'; });
@@ -374,27 +423,92 @@
   }
   function examGo(i) { EX.i = Math.max(0, Math.min(EX.qs.length - 1, i)); saveEX(); paintExam('#exQ'); const top = $('.exam-wrap'); if (top && top.getBoundingClientRect().top < 0) window.scrollTo({ top: top.offsetTop - 80, behavior: 'auto' }); }
   function examSubmit(timeUp, quiet) {
-    if (!EX || EX.done) return; clearInterval(exTimer); EX.done = true; saveEX();
+    if (!EX || EX.done) return;
+    if (official()) { officialSubmit(timeUp, quiet); return; }
+    clearInterval(exTimer); EX.done = true; saveEX();
     const per = {}; let right = 0;
     EX.qs.forEach((qi, k) => { const q = D.exam[qi]; per[q.module] = per[q.module] || { r: 0, n: 0 }; per[q.module].n++; if (EX.ans[k] === q.answer) { right++; per[q.module].r++; } });
     const score = Math.round(right / EX.qs.length * 100); const pass = score >= M.passMark;
-    S.exam.attempts++; S.exam.best = Math.max(S.exam.best, score); S.exam.history.push({ date: today(), score });
-    // the first pass fixes the issue date and credential ID for good; later retakes only raise the best score
-    if (pass && !S.exam.passed) S.exam.passed = { date: today(), score, id: `${M.code}-${today().replace(/-/g, '')}-${hash(M.code + '|' + Date.now() + '|' + Math.random()).slice(0, 6)}` };
-    S.xp += right * 3; save(); EX.result = { right, score, pass, per, timeUp };
-    if (location.hash.split('/')[0] === '#exam') { if (pass) confetti(); view.innerHTML = examResultHTML(); renderChrome(); window.scrollTo({ top: 0, behavior: 'auto' }); const h = $('.verdict .big-num'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
-    else { EX.unseen = true; renderChrome(); if (!quiet || timeUp) toast(`Time is up: your exam was submitted (${score}%). Open Exam to see your result.`, 6000); }
+    S.exam.pbest = Math.max(S.exam.pbest || 0, score); S.xp += right * 3; save();
+    EX.result = { right, score, pass, per, timeUp };
+    showResult(score, pass, timeUp, quiet);
   }
+  async function officialSubmit(timeUp, quiet) {
+    const ex = EX; if (ex.sending) return; ex.sending = true; clearInterval(exTimer); clearTimeout(syncT);
+    $$('[data-exsubmit], [data-exconfirm]').forEach(b => { b.disabled = true; });
+    try {
+      const r = await api('/v1/exam/submit', { attempt: ex.attempt, answers: ex.ans });
+      if (EX !== ex) return;
+      ex.done = true; ex.sending = false; ex.pending = ''; saveEX();
+      const date = r.date || today();
+      S.exam.attempts++; S.exam.best = Math.max(S.exam.best, r.score); S.exam.history.push({ date, score: r.score });
+      if (r.pass && (!S.exam.passed || r.score > S.exam.passed.score)) S.exam.unclaimed = { attempt: ex.attempt, score: r.score, date };
+      S.xp += r.right * 3; save();
+      ex.result = { right: r.right, score: r.score, pass: r.pass, per: r.per || {}, marks: r.marks || [], timeUp: timeUp || r.late };
+      showResult(r.score, r.pass, timeUp, quiet);
+    } catch (e) {
+      ex.sending = false; if (EX !== ex) return;
+      if (e.status === 404) { EX = null; saveEX(); toast('This exam attempt is no longer on the server. Please start a new attempt.', 7000); if (onExamPage()) view.innerHTML = viewExam(); return; }
+      ex.pending = e.message;
+      if (ex.end > Date.now()) exTimer = setInterval(tickExam, 1000);
+      if (onExamPage()) paintExam(); else toast(e.message, 7000);
+    }
+  }
+  function showResult(score, pass, timeUp, quiet) {
+    if (onExamPage()) { if (pass) confetti(); view.innerHTML = examResultHTML(); renderChrome(); window.scrollTo({ top: 0, behavior: 'auto' }); const h = $('.verdict .big-num'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
+    else { EX.unseen = true; renderChrome(); if (!quiet || timeUp) toast(`Time is up: your ${official() ? 'official' : 'practice'} exam was submitted (${score}%). Open Exam to see your result.`, 6000); }
+  }
+  const claimHTML = () => { const P = S.exam.passed, U = S.exam.unclaimed; return `<section class="card list-card claim" id="claimBox"><div class="eyebrow">${P ? 'New best score' : 'Claim your certificate'}</div><p>${P ? `You scored ${U.score}%, higher than your current certificate (${P.score}%). Issue a new certificate with this score? Your current one stays valid. ` : ''}Type your full name exactly as it should appear. <b>Check the spelling: the name cannot be changed once the certificate is issued.</b></p>
+    <form class="search-page" id="claimForm"><input class="search-in" id="claimName" name="name" maxlength="80" autocomplete="name" value="${esc((P && P.name) || S.name || '')}" placeholder="Your full name" aria-label="Your full name" required><button class="btn btn-primary" type="submit">${icon('cert')} Issue my certificate</button></form></section>`; };
   function examResultHTML() {
-    const r = EX.result;
-    return `<div class="exam-wrap"><section class="verdict ${r.pass ? 'pass' : 'fail'}"><div class="eyebrow">${r.timeUp ? 'Time is up · ' : ''}${r.pass ? 'Passed' : 'Not yet'}</div><div class="big-num">${r.score}%</div>
-        <p>${r.right} of ${EX.qs.length} correct. ${r.pass ? (eligible() ? 'Your certificate is unlocked.' : `Complete the remaining lessons (${doneCount()}/${D.lessons.length}) to unlock your certificate.`) : `You need ${M.passMark}%. Review the weaker modules below and try again.`}</p>
-        <div class="hero-actions">${r.pass ? `<a class="btn btn-primary" href="#certificate">${icon('cert')} Go to certificate</a>` : ''}<button class="btn ${r.pass ? '' : 'btn-primary'}" type="button" data-exstart>${r.pass ? 'Retake for a higher score' : 'Retake exam'}</button><button class="btn" type="button" data-exreview>Review answers</button></div></section>
+    const r = EX.result; const off = official(); const P = S.exam.passed;
+    const claimable = off && r.pass && S.exam.unclaimed && S.exam.unclaimed.attempt === EX.attempt;
+    const note = off ? (r.pass ? (claimable ? 'Claim your certificate below.' : P ? `Your certificate ${esc(P.id)} stays valid.` : '') : `You need ${M.passMark}%. Review the weaker modules below and try again.`)
+      : (r.pass ? 'Well done. Practice results do not count: take the official exam to earn your certificate.' : `You need ${M.passMark}%. Review the answers below, then try again.`);
+    return `<div class="exam-wrap"><section class="verdict ${r.pass ? 'pass' : 'fail'}"><div class="eyebrow">${off ? 'Official exam' : 'Practice exam'} · ${r.timeUp ? 'Time is up · ' : ''}${r.pass ? 'Passed' : 'Not yet'}</div><div class="big-num">${r.score}%</div>
+        <p>${r.right} of ${EX.qs.length} correct. ${note}</p>
+        <div class="hero-actions">${off && P && !claimable ? `<a class="btn btn-primary" href="#certificate">${icon('cert')} Go to certificate</a>` : ''}<button class="btn ${r.pass ? '' : 'btn-primary'}" type="button" data-exstart="${off ? 'official' : 'practice'}">${off ? (r.pass ? 'Retake for a higher score' : 'Retake the official exam') : 'Another practice exam'}</button><button class="btn" type="button" data-exreview>${off ? 'See which answers were wrong' : 'Review answers'}</button></div></section>
+      ${claimable ? claimHTML() : ''}
       <div class="card list-card"><div class="eyebrow">Score by module</div><div class="breakdown">${D.modules.filter(m => r.per[m.id]).map(m => { const p = r.per[m.id]; const v = Math.round(p.r / p.n * 100); return `<div class="bd-row"><span>${esc(m.code)}</span><div class="bar"><i style="width:${v}%"></i></div><span>${p.r}/${p.n}</span></div>`; }).join('')}</div></div>
       <div id="exReview"></div></div>`;
   }
   function examReview() {
+    if (official()) {
+      const mk = EX.result.marks || [];
+      $('#exReview').innerHTML = `<p class="muted" style="margin:16px 0 8px">To keep the official exam fair, correct answers and explanations are not shown. Use the module scores above to choose what to revise.</p>` + EX.items.map((q, k) => { const a = EX.ans[k]; const ok = mk[k] === 1; return `<section class="quiz" style="border-color:${ok ? 'var(--good)' : 'var(--bad)'}"><div class="eyebrow">Question ${k + 1} · ${ok ? 'correct' : a == null ? 'not answered' : 'incorrect'}</div><div class="q-text">${md(q.q)}</div>${a != null && q.options[a] != null ? `<p class="muted">Your answer: ${md(q.options[a])}</p>` : ''}</section>`; }).join('');
+      return;
+    }
     $('#exReview').innerHTML = EX.qs.map((qi, k) => { const q = D.exam[qi]; const a = EX.ans[k]; return `<section class="quiz" style="border-color:${a === q.answer ? 'var(--good)' : 'var(--bad)'}"><div class="eyebrow">Question ${k + 1}${a == null ? ' · not answered' : a === q.answer ? ' · correct' : ' · incorrect'}</div><div class="q-text">${md(q.q)}</div><div class="opts">${q.options.map((o, j) => `<div class="opt ${j === q.answer ? 'ok' : j === a ? 'no' : ''}"><span class="k">${'ABCD'[j]}</span><span>${md(o)}</span></div>`).join('')}</div><div class="explain">${md(q.explain)}</div></section>`; }).join('');
+  }
+  async function claimCert(name) {
+    const U = S.exam.unclaimed; if (!U) return;
+    name = String(name || '').replace(/\s+/g, ' ').trim(); if (name.length < 2) { toast('Please type your full name.'); const i = $('#claimName'); if (i) i.focus(); return; }
+    const b = $('#claimForm button'); if (b) { b.disabled = true; b.textContent = 'Issuing…'; }
+    try {
+      const c = await api('/v1/cert/claim', { attempt: U.attempt, name, capstone: capDone() });
+      S.name = c.name; S.exam.passed = { v: 1, id: c.id, date: c.date, score: c.score, name: c.name, distinction: !!c.distinction, attempt: U.attempt }; delete S.exam.unclaimed; save();
+      confetti(); toast(`Certificate issued: ${c.id}`, 5000);
+      if (location.hash === '#certificate') render(); else { linkNav = true; location.hash = '#certificate'; }
+    } catch (e) {
+      toast(e.message, 7000);
+      if ([403, 404, 410].includes(e.status)) { delete S.exam.unclaimed; save(); render(); } else if (b) { b.disabled = false; b.innerHTML = `${icon('cert')} Issue my certificate`; }
+    }
+  }
+  async function restoreCert(id) {
+    id = String(id || '').trim(); if (!id) return;
+    const b = $('#restoreForm button'); if (b) b.disabled = true;
+    try {
+      const c = await api('/v1/verify/' + encodeURIComponent(id));
+      if (c.track !== SLUG) { toast(`That ID belongs to ${c.short}. Open ${c.domain} to see it.`, 7000); return; }
+      if (c.revoked) { toast('That certificate has been revoked.', 7000); return; }
+      S.exam.passed = { v: 1, id: c.id, date: c.date, score: c.score, name: c.name, distinction: !!c.distinction, restored: true }; S.name = c.name; save(); render(); toast(`Restored certificate ${c.id}.`, 5000);
+    } catch (e) { toast(e.status === 404 || e.status === 400 ? 'No certificate has that credential ID. Check it and try again.' : e.message, 7000); }
+    finally { if (b && b.isConnected) b.disabled = false; }
+  }
+  async function upgradeCert() {
+    const P = S.exam.passed; if (!P) return;
+    try { const c = await api('/v1/cert/claim', { attempt: P.attempt, capstone: capDone() }); P.distinction = !!c.distinction; save(); render(); toast(P.distinction ? 'Upgraded: your certificate now shows Distinction.' : `Distinction needs ${M.distinctionMark}% and a complete capstone.`, 5000); }
+    catch (e) { toast(e.message, 7000); }
   }
 
   /* ---------------- capstone ---------------- */
@@ -409,28 +523,54 @@
   }
 
   /* ---------------- certificate ---------------- */
-  function credId() {
-    const p = S.exam.passed; if (!p) return '';
-    // older saves had no stored ID: create it once and keep it forever
-    if (!p.id) { p.id = `${M.code}-${p.date.replace(/-/g, '')}-${hash(M.code + '|' + p.date + '|' + p.score + '|' + (S.name || '').trim().toLowerCase()).slice(0, 6)}`; save(); }
-    return p.id;
-  }
+  const credId = () => (S.exam.passed && S.exam.passed.id) || '';
+  const verifyURL = id => `https://${M.domain}/#verify/${encodeURIComponent(id)}`;
   function viewCertificate() {
-    const r = req(); const ok = eligible();
-    const items = [['Complete every lesson', `${doneCount()}/${D.lessons.length} lessons`, r.lessons, '#modules'], [`Pass the exam with ${M.passMark}%+`, S.exam.best ? `Best score ${S.exam.best}%` : 'Not attempted yet', r.exam, '#exam'], [`Distinction (optional): ${M.distinctionMark}%+ and the capstone`, capDone() ? 'Capstone complete' : 'Capstone in progress', distinction(), '#capstone']];
-    return `<div class="page-head"><div class="eyebrow">${esc(M.short)} certificate</div><h1 class="page-title">${ok ? 'Your certificate is ready' : 'Unlock your certificate'}</h1><p class="muted">${ok ? 'Type your name exactly as you want it to appear, then download it or add it to LinkedIn.' : 'Finish these steps and your certificate unlocks automatically. The preview below shows what you will receive.'}</p></div>
+    const r = req(); const ok = eligible(); const P = S.exam.passed; const U = S.exam.unclaimed;
+    const examNote = P ? `Passed with ${P.score}% · ${P.id}` : U ? `Passed with ${U.score}%: claim your certificate below` : S.exam.best ? `Best official score ${S.exam.best}%` : 'Not attempted yet';
+    const canUpgrade = P && P.attempt && !P.distinction && P.score >= M.distinctionMark && capDone();
+    const items = [['Complete every lesson', `${doneCount()}/${D.lessons.length} lessons`, r.lessons, '#modules'], [`Pass the official exam with ${M.passMark}%+`, examNote, r.exam, '#exam'], [`Distinction (optional): ${M.distinctionMark}%+ and the capstone`, P && P.distinction ? 'Awarded' : capDone() ? 'Capstone complete' : 'Capstone in progress', distinction(), '#capstone']];
+    return `<div class="page-head"><div class="eyebrow">${esc(M.short)} certificate</div><h1 class="page-title">${ok ? 'Your certificate is ready' : U ? 'Claim your certificate' : 'Unlock your certificate'}</h1><p class="muted">${ok ? 'Download it, add it to LinkedIn, or share its verification link: anyone can confirm it is genuine.' : U ? 'You passed the official exam. Type your name below to issue your certificate.' : 'Finish these steps to unlock your certificate. The preview below shows what you will receive.'}</p></div>
       <div class="req">${items.map(([t, s, done, href]) => `<a class="req-i ${done ? 'ok' : ''}" href="${href}" style="text-decoration:none;color:inherit"><span class="st">${done ? '✓' : ''}</span><span><b>${esc(t)}</b><br><small class="muted">${esc(s)}</small></span>${icon('arrowR')}</a>`).join('')}</div>
-      <div class="cert-tools"><label>Name on certificate<input id="certName" type="text" maxlength="48" value="${esc(S.name)}" placeholder="Your full name"></label>
-        <button class="btn btn-primary" type="button" data-certdl ${ok ? '' : 'disabled'}>${icon('download')} Download PNG</button>
-        <a class="btn" id="lnBtn" href="${ok ? linkedinURL() : '#certificate'}" ${ok ? 'target="_blank" rel="noopener"' : 'aria-disabled="true"'}>Add to LinkedIn</a></div>
-      ${ok ? `<p class="cred">Credential ID: <span id="credId">${esc(credId())}</span></p>` : ''}
+      ${U ? claimHTML() : ''}
+      ${ok ? `<div class="cert-tools"><p class="cert-name">Name on certificate: <b>${esc(P.name)}</b><br><small class="muted">The name is fixed once issued. To correct a spelling mistake, contact ZyeemZia with your credential ID.</small></p>
+        <button class="btn btn-primary" type="button" data-certdl>${icon('download')} Download PNG</button>
+        <a class="btn" id="lnBtn" href="${linkedinURL()}" target="_blank" rel="noopener">Add to LinkedIn</a>
+        ${canUpgrade ? `<button class="btn" type="button" data-upgrade>Upgrade to Distinction</button>` : ''}</div>
+        <p class="cred">Credential ID: <span id="credId">${esc(P.id)}</span> · <a href="#verify/${encodeURIComponent(P.id)}">Verification page</a></p>`
+      : U ? '' : `<div class="cert-tools"><label>Preview your name<input id="certName" type="text" maxlength="80" value="${esc(S.name)}" placeholder="Your full name"></label></div>
+        <div class="card list-card"><div class="eyebrow">Already certified?</div><p>Earned this certificate on another device or browser? Enter its credential ID to restore it here.</p><form class="search-page" id="restoreForm"><input class="search-in" name="id" placeholder="${esc(M.code)}-20261019-7K2QXM" aria-label="Credential ID" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn" type="submit">Restore</button></form></div>`}
       <canvas id="certCanvas" class="cert-canvas" width="1600" height="1130" aria-label="Certificate"></canvas>
       <p class="muted" style="font-size:.8rem;margin-top:12px">${esc(M.disclaimer || '')}</p>`;
   }
   function linkedinURL() {
-    const p = S.exam.passed || { date: today() }; const [y, mo] = p.date.split('-');
-    const q = new URLSearchParams({ startTask: 'CERTIFICATION_NAME', name: `${M.full} (${M.short})`, organizationName: 'ZyeemZia', issueYear: y, issueMonth: String(+mo), certUrl: `https://${M.domain}/`, certId: credId() });
+    const p = S.exam.passed; if (!p) return '#certificate'; const [y, mo] = p.date.split('-');
+    const q = new URLSearchParams({ startTask: 'CERTIFICATION_NAME', name: `${M.full} (${M.short})`, organizationName: 'ZyeemZia', issueYear: y, issueMonth: String(+mo), certUrl: verifyURL(p.id), certId: p.id });
     return 'https://www.linkedin.com/profile/add?' + q.toString();
+  }
+
+  /* ---------------- verify a credential ---------------- */
+  const decodeArg = a => { try { return decodeURIComponent(a || ''); } catch (e) { return a || ''; } };
+  function viewVerify(arg) {
+    const id = decodeArg(arg);
+    return `<div class="page-head"><div class="eyebrow">ZyeemZia credentials</div><h1 class="page-title">Verify a certificate</h1><p class="muted">Every ZyeemZia certificate has a credential ID, such as ${esc(M.code)}-20261019-7K2QXM. Enter it to confirm the certificate is genuine.</p>
+      <form class="search-page" id="verifyForm"><input class="search-in" id="verifyIn" name="id" value="${esc(id)}" placeholder="Credential ID" aria-label="Credential ID" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn btn-primary" type="submit">Verify</button></form></div>
+      <div id="verifyOut" aria-live="polite"></div>`;
+  }
+  let verifySeq = 0;
+  async function runVerify(arg) {
+    const id = decodeArg(arg).trim(); const out = $('#verifyOut'); if (!out || !id) return;
+    const seq = ++verifySeq; out.innerHTML = `<p class="muted">Checking ${esc(id)}…</p>`; let html;
+    try {
+      const c = await api('/v1/verify/' + encodeURIComponent(id));
+      const rows = [['Name', c.name], ['Certification', c.trackName], ['Issued', c.date], ['Exam score', c.score + '%'], ['Credential ID', c.id]];
+      html = `<section class="verdict ${c.revoked ? 'fail' : 'pass'}"><div class="eyebrow">${c.revoked ? 'Revoked' : 'Verified'} · ZyeemZia</div><div class="big-num vf-big">${c.revoked ? 'Not valid' : 'Genuine'}</div><p>${c.revoked ? 'This certificate was issued by ZyeemZia but has been revoked.' : `This certificate was issued by ZyeemZia${c.distinction ? ' <b>with Distinction</b>' : ''}.`}</p></section>
+        <div class="card list-card"><dl class="vf">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(String(v))}</dd>`).join('')}</dl>${c.domain && c.domain !== M.domain ? `<p class="muted" style="margin-top:10px">Course: <a href="https://${esc(c.domain)}/" rel="noopener">${esc(c.domain)}</a></p>` : ''}</div>`;
+    } catch (e) {
+      html = e.status === 404 || e.status === 400 ? `<section class="verdict fail"><div class="eyebrow">Not found</div><div class="big-num vf-big">No match</div><p>No ZyeemZia certificate has the ID <b>${esc(id)}</b>. Check it carefully: IDs look like ${esc(M.code)}-20261019-7K2QXM.</p></section>`
+        : `<div class="callout warning"><span class="ct">Could not check</span>${esc(e.message)}</div>`;
+    }
+    if (seq === verifySeq && $('#verifyOut')) $('#verifyOut').innerHTML = html;
   }
   // canvas text needs its faces loaded first, otherwise the PNG falls back to system fonts
   let certFontsP = null;
@@ -462,14 +602,14 @@
     const L = 460; x.textAlign = 'left';
     x.fillStyle = '#5b6478'; x.font = `600 24px ${mono}`; x.fillText((M.certificate || {}).title ? M.certificate.title.toUpperCase() : 'CERTIFICATE OF ACHIEVEMENT', L, 140);
     x.fillStyle = '#14182a'; x.font = `500 30px ${body}`; x.fillText('This certifies that', L, 230);
-    x.fillStyle = '#0f1424'; const nm = (S.name || '').trim() || 'Your Name'; fitFont(x, nm, 800, 74, 34, disp, W - L - 60); x.fillText(nm, L, 330, W - L - 60);
+    x.fillStyle = '#0f1424'; const nm = ok ? S.exam.passed.name : ((S.name || '').trim() || 'Your Name'); fitFont(x, nm, 800, 74, 34, disp, W - L - 60); x.fillText(nm, L, 330, W - L - 60);
     x.fillStyle = acc; x.fillRect(L, 360, 520, 5);
     x.fillStyle = '#2b3245'; x.font = `400 30px ${body}`; wrapText(x, (M.certificate || {}).statement || '', L, 430, 1060, 42);
     x.fillStyle = '#5b6478'; x.font = `600 20px ${mono}`; x.fillText('SKILLS', L, 600);
     x.font = `500 24px ${body}`; let sx = L, sy = 620; ((M.certificate || {}).skills || []).forEach(s => { const w = x.measureText(s).width + 36; if (sx + w > W - 60) { sx = L; sy += 58; } x.fillStyle = '#eef0f6'; roundRect(x, sx, sy, w, 46, 23); x.fill(); x.fillStyle = '#2b3245'; x.fillText(s, sx + 18, sy + 31); sx += w + 12; });
-    const p = S.exam.passed || { date: today(), score: S.exam.best };
-    const rows = [['Issued', ok ? p.date : '—'], ['Best exam score', ok ? S.exam.best + '%' : '—'], ['Credential ID', ok ? credId() : 'Unlocks on completion'], ['Verify', M.domain]];
-    rows.forEach(([k, v], i) => { const cx = L + (i % 2) * 540, cy = 800 + Math.floor(i / 2) * 88; x.fillStyle = '#8a91a3'; x.font = `600 18px ${mono}`; x.fillText(k.toUpperCase(), cx, cy); x.fillStyle = '#14182a'; x.font = `600 28px ${body}`; x.fillText(v, cx, cy + 38); });
+    const p = S.exam.passed || {};
+    const rows = [['Issued', ok ? p.date : '—'], ['Exam score', ok ? p.score + '%' : '—'], ['Credential ID', ok ? p.id : 'Issued after the official exam'], ['Verify', `${M.domain}/#verify`]];
+    rows.forEach(([k, v], i) => { const cx = L + (i % 2) * 540, cy = 800 + Math.floor(i / 2) * 88; x.fillStyle = '#8a91a3'; x.font = `600 18px ${mono}`; x.fillText(k.toUpperCase(), cx, cy); x.fillStyle = '#14182a'; x.font = `600 28px ${body}`; x.fillText(v, cx, cy + 38, 510); });
     x.fillStyle = '#8a91a3'; x.font = `500 18px ${body}`; x.fillText('Issued by ZyeemZia · Copyright © ZyeemZia · Independent programme, not affiliated with any other certifying body.', L, H - 70);
     if (!ok) { x.save(); x.translate(W / 2 + 180, H / 2); x.rotate(-0.25); x.fillStyle = 'rgba(180,40,40,.16)'; x.font = `800 120px ${disp}`; x.textAlign = 'center'; x.fillText('PREVIEW', 0, 0); x.restore(); }
   }
@@ -479,9 +619,9 @@
   /* ---------------- settings & search ---------------- */
   function viewSettings() {
     return `<div class="page-head"><div class="eyebrow">Settings</div><h1 class="page-title">Progress & settings</h1></div>
-      <div class="two"><div class="card list-card"><div class="eyebrow">Progress</div><p>${doneCount()}/${D.lessons.length} lessons · best exam ${S.exam.best}% · ${Object.keys(S.srs).length} flashcards studied</p><div class="bar"><i style="width:${pct()}%"></i></div></div>
+      <div class="two"><div class="card list-card"><div class="eyebrow">Progress</div><p>${doneCount()}/${D.lessons.length} lessons · best official exam ${S.exam.best}% · best practice exam ${S.exam.pbest}% · ${Object.keys(S.srs).length} flashcards studied</p><div class="bar"><i style="width:${pct()}%"></i></div></div>
         <div class="card list-card"><div class="eyebrow">Theme</div><div class="chips">${['auto', 'light', 'dark'].map(t => `<button class="btn btn-sm ${S.theme === t ? 'btn-primary' : ''}" type="button" data-theme-set="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div></div>
-        <div class="card list-card"><div class="eyebrow">Reset</div><p class="muted">Erase lessons, exam results, notes and flashcards on this device.</p><span id="resetSlot"><button class="btn btn-sm" type="button" data-reset="ask">Reset progress</button></span></div></div>`;
+        <div class="card list-card"><div class="eyebrow">Reset</div><p class="muted">Erase lessons, exam results, notes and flashcards on this device. An issued certificate stays valid: restore it later with its credential ID.</p><span id="resetSlot"><button class="btn btn-sm" type="button" data-reset="ask">Reset progress</button></span></div></div>`;
   }
   function viewSearch(q) {
     try { q = decodeURIComponent(q || ''); } catch (e) { q = q || ''; }
@@ -504,8 +644,8 @@
     const [r, arg] = location.hash.slice(1).split('/');
     // a finished exam shows its result once; coming back later shows the exam start page again
     if (EX && EX.done && r !== 'exam' && !EX.unseen) EX = null;
-    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch }[r || ''] || notFound;
-    view.innerHTML = V(arg); renderChrome();
+    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify }[r || ''] || notFound;
+    view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg);
     const back = ev && !linkNav && scrollMem[location.hash || '#'] != null; linkNav = false;
     window.scrollTo({ top: back ? scrollMem[location.hash || '#'] : 0, behavior: 'auto' });
     if (ev && !reduced()) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); }
@@ -549,7 +689,8 @@
     const dr = t.closest('[data-drill]'); if (dr) { startDrill(dr.dataset.drill); return; }
     if (t.closest('#fcCard')) { fcFlip = !fcFlip; const c = $('#fcCard'); c.classList.toggle('flip', fcFlip); c.setAttribute('aria-pressed', fcFlip); const ft = fcQueue[0]; if (ft) c.setAttribute('aria-label', `${plain(ft.term)}. ${fcFlip ? plain(ft.def) : 'Press Enter to see the definition'}`); return; }
     const fg = t.closest('[data-fc]'); if (fg) { fcGrade(+fg.dataset.fc); return; }
-    if (t.closest('[data-exstart]')) { examStart(); return; }
+    const xs = t.closest('[data-exstart]'); if (xs) { examStart(xs.dataset.exstart); return; }
+    if (t.closest('[data-upgrade]')) { upgradeCert(); return; }
     const xa = t.closest('[data-exans]'); if (xa && EX && !EX.done) { examAnswer(+xa.dataset.exans); return; }
     const xg = t.closest('[data-exgo]'); if (xg && EX && !EX.done) { examGo(+xg.dataset.exgo); return; }
     if (t.closest('[data-exflag]') && EX && !EX.done) { examFlag(); return; }
@@ -564,8 +705,7 @@
     const rb = t.closest('[data-rub]'); if (rb) { const [i, j] = rb.dataset.rub.split(':').map(Number); S.cap.rubric[i] = j; save(); $$(`[data-rub^="${i}:"]`).forEach(b => { const on = b === rb; b.setAttribute('aria-pressed', on); b.parentElement.classList.toggle('sel', on); }); return; }
     if (t.closest('[data-certdl]')) {
       if (!eligible()) return;
-      if (!(S.name || '').trim()) { toast('Type your name first: it is printed on the certificate.'); const i = $('#certName'); if (i) i.focus(); return; }
-      certFonts().then(() => { drawCert(); const a = document.createElement('a'); a.download = `${M.short}-certificate-${S.name.trim().replace(/[^\w\-]+/g, '-')}.png`; a.href = $('#certCanvas').toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); });
+      certFonts().then(() => { drawCert(); const a = document.createElement('a'); a.download = `${M.short}-certificate-${S.exam.passed.id}.png`; a.href = $('#certCanvas').toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); });
       return;
     }
     const rs = t.closest('[data-reset]'); if (rs) {
@@ -583,13 +723,16 @@
     const c = e.target;
     if (c.dataset.note) { S.notes[c.dataset.note] = c.value; saveSoon(); }
     if (c.id === 'capNotes') { S.cap.notes = c.value; saveSoon(); }
-    if (c.id === 'certName') { S.name = c.value; saveSoon(); drawCertSoon(); const ln = $('#lnBtn'); if (ln && eligible()) ln.href = linkedinURL(); }
+    if (c.id === 'certName') { S.name = c.value; saveSoon(); drawCertSoon(); }
     if (c.id === 'glSearch') { glQuery = c.value; $('#glList').innerHTML = glossaryList(); }
     if (c.dataset.subnetIn != null) { c.closest('[data-subnet]').querySelector('.sn-out').innerHTML = subnetHTML(c.value); }
     if (c.dataset.cell) { const tpl = c.closest('[data-tpl]').dataset.tpl; const [r, k] = c.dataset.cell.split(':').map(Number); const g = S.cells[tpl] = S.cells[tpl] || []; g[r] = g[r] || []; g[r][k] = c.innerText; saveSoon(); }
   });
   document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.id === 'fcCard') { e.preventDefault(); document.activeElement.click(); } });
   document.addEventListener('submit', e => {
+    const cf = e.target.closest('#claimForm'); if (cf) { e.preventDefault(); claimCert($('input', cf).value); return; }
+    const rf = e.target.closest('#restoreForm'); if (rf) { e.preventDefault(); restoreCert($('input', rf).value); return; }
+    const vf = e.target.closest('#verifyForm'); if (vf) { e.preventDefault(); const h = '#verify/' + encodeURIComponent($('input', vf).value.trim()); linkNav = true; if (location.hash === h) runVerify(h.slice(8)); else location.hash = h; return; }
     const f = e.target.closest('#searchForm, #searchPage'); if (!f) return;
     e.preventDefault(); const q = $('input', f).value.trim(); linkNav = true; location.hash = '#search/' + encodeURIComponent(q);
   });
@@ -604,6 +747,8 @@
   // never lose the last keystrokes when the tab is closed or hidden
   const flush = () => { if (saveT) save(); };
   addEventListener('pagehide', flush);
+  addEventListener('pagehide', () => { if (official() && !EX.done) syncEX(true); });
+  addEventListener('online', () => { if (official() && !EX.done && EX.pending) examSubmit(EX.end <= Date.now(), true); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
   const mq = matchMedia('(prefers-color-scheme: dark)'); const onMQ = () => { if (S.theme === 'auto') renderChrome(); };
   if (mq.addEventListener) mq.addEventListener('change', onMQ); else if (mq.addListener) mq.addListener(onMQ);

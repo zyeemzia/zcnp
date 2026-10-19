@@ -16,7 +16,7 @@
     </div></section>`;
   }
   function intro() {
-    const steps = [['Learn', `Work through ${D.lessons.length} lessons. Each ends with a knowledge check.`], ['Practise', 'Fill in the templates, answer the scenarios and case studies, review the glossary.'], ['Certify', `Take the ${M.examSize}-question online exam at ${M.domain}. Pass mark ${M.passMark}%.`], ['Get certified', `Download your certificate online. ${M.distinctionMark}%+ and the capstone earn Distinction.`]];
+    const steps = [['Learn', `Work through ${D.lessons.length} lessons. Each ends with a knowledge check.`], ['Practise', 'Fill in the templates, answer the scenarios and case studies, review the glossary.'], ['Certify', `Take the ${M.examSize}-question official exam at ${M.domain}, graded on the ZyeemZia server. Pass mark ${M.passMark}%.`], ['Get certified', `Download your certificate online. Anyone can verify its credential ID at ${M.domain}/#verify. ${M.distinctionMark}%+ and the capstone earn Distinction.`]];
     return `<section class="flow"><div class="eyebrow">Before you begin</div><h1 class="h-page">How to use this book</h1>
       <p>${md(M.lead)}</p>
       <div class="how">${steps.map(([t, s], i) => `<div><span class="n">${num(i)}</span><b>${t}</b><p>${esc(s)}</p></div>`).join('')}</div>
@@ -100,7 +100,7 @@
     let n = 0; const key = [];
     const body = D.modules.map(m => { const qs = D.exam.filter(q => q.module === m.id); if (!qs.length) return ''; return `<h3 class="b-title">${esc(m.code)} — ${md(m.title)}</h3><ol class="exam-q" start="${n + 1}">${qs.map(q => { n++; key.push({ n, q }); return `<li>${md(q.q)}<div class="qo">${q.options.map((o, k) => `<span><b>${KEY[k]}</b> ${md(o)}</span>`).join('')}</div></li>`; }).join('')}</ol>`; }).join('');
     return `<section class="flow"><div class="eyebrow">Exam preparation</div><h1 class="h-page">Practice exam · ${D.exam.length} questions</h1>
-      <p>The online certification exam draws ${M.examSize} of these questions at random, with a ${M.examMinutes}-minute limit and a ${M.passMark}% pass mark. Practise here first: time yourself, mark your answers, then check the key and read every explanation, including for the questions you got right.</p>${body}</section>
+      <p>The official online exam draws ${M.examSize} questions at random from a separate, secret bank that tests the same skills, with a ${M.examMinutes}-minute limit and a ${M.passMark}% pass mark. Practise with these questions first: time yourself, mark your answers, then check the key and read every explanation, including for the questions you got right.</p>${body}</section>
       <section class="flow"><div class="eyebrow">Exam preparation</div><h1 class="h-page">Practice exam answers & explanations</h1><div class="key">${key.map(k => `<div><b>${k.n}. ${KEY[k.q.answer]}</b> ${md(k.q.explain)}</div>`).join('')}</div></section>`;
   }
   function certificate() {
@@ -109,7 +109,7 @@
       <div class="cert-main"><div class="eyebrow">${esc(c.title || 'Certificate of Achievement')}</div><p>This certifies that</p><div class="name-line"></div><p>${esc(c.statement || '')}</p>
       <div class="skills">${(c.skills || []).map(s => `<span>${esc(s)}</span>`).join('')}</div>
       <div class="cert-meta"><div>Issued<span></span></div><div>Credential ID<span></span></div></div>
-      <p class="hint">Earn the official certificate online at ${esc(M.domain)}: complete every lesson and pass the exam. This page is for your printed record.</p></div></div></section>`;
+      <p class="hint">Earn the official certificate online at ${esc(M.domain)}: complete every lesson and pass the official exam. Anyone can verify your credential ID at ${esc(M.domain)}/#verify. This page is for your printed record.</p></div></div></section>`;
   }
   function academy() {
     const F = window.ZZ_FAMILY || []; if (!F.length) return '';

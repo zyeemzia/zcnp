@@ -417,3 +417,16 @@ a.sg-node:hover rect, a.sg-node:hover polygon { stroke-width: 3.5; }
   .lesson-row .ln { font-size: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { .view.enter, .boot i { animation: none; } }
+
+/* ---------- official exam, claim and verification ---------- */
+.exam-modes { margin: 16px 0; }
+.exam-modes .list-card { display: flex; flex-direction: column; gap: 10px; }
+.exam-modes .hero-actions { margin-top: auto; }
+.claim { margin: 16px 0; border: 2px solid var(--good); }
+.claim p { margin: 6px 0 4px; }
+.cert-name { flex: 1 1 100%; margin: 0; }
+.vf-big { font-size: clamp(2.2rem, 7vw, 3.4rem); }
+dl.vf { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 20px; margin: 0; }
+dl.vf dt { font: 600 .78rem var(--f-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; padding-top: 3px; }
+dl.vf dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 560px) { dl.vf { grid-template-columns: minmax(0, 1fr); gap: 2px; } dl.vf dd { margin-bottom: 10px; } }
