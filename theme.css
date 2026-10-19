@@ -1,0 +1,25 @@
+/* ZCNP — "carrier": royal blue, amber signal; fine circuit-grid motif. */
+:root {
+  --bg: #f3f5fb; --surface: #ffffff; --surface-2: #e6eaf6; --ink: #0f1a3d; --ink-2: #4a5679; --ink-3: #636d94; --line: #d8ddef;
+  --accent: #2453d6; --accent-ink: #ffffff; --accent-soft: #e2e9fb; --accent-2: #946604; --accent-2-soft: #f7ecd2;
+  --good: #1d7a4b; --good-soft: #dcf1e4; --bad: #b42a2a; --bad-soft: #f9e2e0; --warn: #b77800; --warn-soft: #fbefd3; --on-status: #ffffff;
+  --hero-bg: #0d1b4d; --hero-ink: #f0f3fd; --hero-ink-2: #a9b5df; --hero-accent: #f5b52e;
+  --motif: linear-gradient(rgba(111,155,255,.10) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(90deg, rgba(111,155,255,.10) 1px, transparent 1px) 0 0 / 28px 28px, radial-gradient(circle at 85% 20%, rgba(245,181,46,.25), transparent 40%);
+  --sg-line: #2a3c7a; --sg-accent: #f5b52e; --sg-accent-2: #6f9bff; --sg-node: #0f2160; --sg-ink: #f0f3fd; --sg-ink-2: #a9b5df;
+  --f-display: "Archivo", "IBM Plex Sans", "Segoe UI", sans-serif; --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --f-mono: "IBM Plex Mono", Consolas, monospace;
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --bg: #080e24; --surface: #0f1733; --surface-2: #172143; --ink: #e8ecfa; --ink-2: #a5aed0; --ink-3: #7983a3; --line: #243056;
+  --accent: #6f9bff; --accent-ink: #06102e; --accent-soft: #1a2a5c; --accent-2: #f5b52e; --accent-2-soft: #3a2c0c;
+  --good: #5bd39a; --good-soft: #10301f; --bad: #ff7a7a; --bad-soft: #3a1616; --warn: #f2b84c; --warn-soft: #3a2c10; --on-status: #080e24;
+  color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #080e24; --surface: #0f1733; --surface-2: #172143; --ink: #e8ecfa; --ink-2: #a5aed0; --ink-3: #7983a3; --line: #243056;
+  --accent: #6f9bff; --accent-ink: #06102e; --accent-soft: #1a2a5c; --accent-2: #f5b52e; --accent-2-soft: #3a2c0c;
+  --good: #5bd39a; --good-soft: #10301f; --bad: #ff7a7a; --bad-soft: #3a1616; --warn: #f2b84c; --warn-soft: #3a2c10; --on-status: #080e24;
+  color-scheme: dark;
+}
