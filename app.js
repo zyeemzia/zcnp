@@ -630,17 +630,17 @@
   }
   async function deleteAccount() { try { await api('/v1/me', null, { method: 'DELETE' }); signOutLocal('Your account and synced progress were deleted.'); } catch (e) { toast(e.message, 7000); } }
 
-  /* ---------------- contact: the shared ZyeemZia Direct Transmission Hub, loaded only when opened ---------------- */
+  /* ---------------- contact: the shared ZyeemZia contact form (civil tone), loaded only when opened ---------------- */
   const TX_BASE = 'https://zyeemzia.com/';
   let txP = null;
   const loadTransmit = () => window.ZZTransmit ? Promise.resolve() : txP || (txP = new Promise((res, rej) => {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = TX_BASE + 'transmit.css?v=3'; document.head.appendChild(l);
-    const sc = document.createElement('script'); sc.src = TX_BASE + 'transmit.js?v=3'; sc.onload = () => res(); sc.onerror = () => { txP = null; rej(); }; document.head.appendChild(sc);
+    const sc = document.createElement('script'); sc.src = TX_BASE + 'transmit.js?v=5'; sc.onload = () => res(); sc.onerror = () => { txP = null; rej(); }; document.head.appendChild(sc);
   }));
   function viewContact() {
     return `<div class="page-head"><div class="eyebrow">Contact</div><h1 class="page-title">Talk to ZyeemZia</h1><p class="muted">Questions about ${esc(M.short)}, your certificate, the exam or a partnership? Send a message and the reply will come to your email.</p></div>
-      <section class="tx-mount" id="contact" data-tx-topic="academy" data-tx-dark='html[data-theme="dark"]' data-tx-light='html[data-theme="light"]' data-tx-auto="media"
-        data-tx-regarding="${esc(`${M.full} (${M.short})`)}" data-tx-source="${esc(M.domain)} · Course" data-tx-lead="Questions about this course, the official exam, your certificate or sign-in? Transmit a message straight to the ZyeemZia command desk."><p class="muted">Loading the contact form…</p></section>`;
+      <section class="tx-mount" id="contact" data-tx-tone="civil" data-tx-topic="academy" data-tx-dark='html[data-theme="dark"]' data-tx-light='html[data-theme="light"]' data-tx-auto="media"
+        data-tx-regarding="${esc(`${M.full} (${M.short})`)}" data-tx-source="${esc(M.domain)} · Course" data-tx-lead="Questions about this course, the official exam, your certificate or sign-in? Write to the ZyeemZia team and we will reply by email."><p class="muted">Loading the contact form…</p></section>`;
   }
   function mountContact() {
     loadTransmit().then(() => { const el = $('#view .tx-mount'); if (el && window.ZZTransmit) window.ZZTransmit.mount(el); })
