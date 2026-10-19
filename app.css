@@ -430,3 +430,16 @@ dl.vf { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 1
 dl.vf dt { font: 600 .78rem var(--f-mono); color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; padding-top: 3px; }
 dl.vf dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 @media (max-width: 560px) { dl.vf { grid-template-columns: minmax(0, 1fr); gap: 2px; } dl.vf dd { margin-bottom: 10px; } }
+
+/* ---------- account ---------- */
+#acctBtn { overflow: hidden; }
+#acctBtn img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+.acct-ini { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font: 700 1.4rem var(--f-display); }
+.acct-ini.sm { width: 28px; height: 28px; font-size: .85rem; }
+.acct-card { display: grid; gap: 12px; }
+.acct-who { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.acct-who img { border-radius: 50%; flex: none; }
+.acct-who > div { min-width: 0; overflow-wrap: anywhere; }
+.gsi-slot { min-height: 44px; display: flex; align-items: center; }
+/* Google's button frame is a light document: match its colour scheme so dark mode shows no white box */
+.gsi-slot iframe { color-scheme: light; }

@@ -14,7 +14,8 @@ flashcards, a timed certification exam, a capstone project and a downloadable ce
 | `data/track.js` | Track settings: exam rules, capstone, certificate |
 | `data/m*.js` | Modules, lessons and the exam bank |
 
-Progress, notes and certificates are stored only in the learner's browser.
+Progress is stored in the learner's browser, and optionally synced to their account with Google sign-in.
+The official exam is graded by the ZyeemZia certification API, which issues verifiable credential IDs.
 
 ---
 

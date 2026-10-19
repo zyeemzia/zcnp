@@ -9,11 +9,11 @@
 
   /* ---------------- state ---------------- */
   const KEY = M.storeKey || 'zz-track';
-  const defaults = () => ({ theme: 'auto', done: {}, quiz: {}, checks: {}, notes: {}, cells: {}, sc: {}, srs: {}, exam: { v: 2, best: 0, attempts: 0, passed: null, history: [], pbest: 0 }, cap: { deliv: {}, rubric: {}, notes: '' }, name: '', xp: 0 });
+  const defaults = () => ({ theme: 'auto', done: {}, quiz: {}, checks: {}, notes: {}, cells: {}, sc: {}, srs: {}, exam: { v: 2, best: 0, attempts: 0, passed: null, history: [], pbest: 0 }, cap: { deliv: {}, rubric: {}, notes: '' }, name: '', xp: 0, _t: 0 });
   // load saved progress defensively: older or partial saves must never break a page
-  function loadState() {
-    let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  const loadState = () => { let saved = {}; try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; } return normalize(saved); };
+  function normalize(saved) {
+    try { saved = JSON.parse(JSON.stringify(saved || {})); } catch (e) { saved = {}; }
     const d = defaults(), s = Object.assign(defaults(), typeof saved === 'object' && !Array.isArray(saved) ? saved : {});
     Object.keys(d).forEach(k => {
       const dv = d[k], v = s[k];
@@ -36,8 +36,13 @@
     return s;
   }
   let S = loadState();
+  // optional Google sign-in (per site); the session token lives only in this browser
+  const AUTH_KEY = 'zz.auth';
+  const readAuth = () => { try { const a = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); return a && /^[0-9a-f]{64}$/.test(a.token) ? a : null; } catch (e) { return null; } };
+  let AUTH = readAuth();
+  let pushT = 0, lastPull = 0, pulling = false, lastPushed = '';
   let saveT = 0;
-  const save = () => { clearTimeout(saveT); saveT = 0; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or blocked */ } };
+  const save = () => { clearTimeout(saveT); saveT = 0; S._t = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or blocked */ } scheduleSync(); };
   const saveSoon = () => { clearTimeout(saveT); saveT = setTimeout(save, 350); };
   // local calendar date (not UTC), so Dhaka learners get the right day around midnight
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -56,7 +61,7 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', arrowR: '<path d="M9 5l7 7-7 7"/>', arrowL: '<path d="M15 5l-7 7 7 7"/>',
-    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', download: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'
+    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', download: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'
   };
   const icon = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n] || ''}</svg>`;
 
@@ -95,6 +100,7 @@
     $('#mainnav').innerHTML = NAV.map(([k, label, href]) => `<a href="${href}" ${cur(k)}>${label}</a>`).join('') + `<a href="book.html" target="_blank" rel="noopener">${icon('book')}Book</a>`;
     $('#tabbar').innerHTML = NAV.filter(([k]) => TABS.includes(k)).map(([k, label, href, ic]) => `<a href="${href}" ${cur(k)}>${icon(ic)}<span>${label}</span></a>`).join('');
     $('#themeBtn').innerHTML = icon(isDark() ? 'sun' : 'moon');
+    const ab = $('#acctBtn'); if (ab) { const u = AUTH && AUTH.user; ab.innerHTML = u ? (u.picture ? `<img src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : `<span class="acct-ini sm">${esc((u.name || u.email || '?').trim().charAt(0).toUpperCase())}</span>`) : icon('user'); ab.setAttribute('aria-label', u ? `Account: ${u.name || u.email || ''}` : 'Sign in'); ab.classList.toggle('on', !!u); }
     $('#progChip').innerHTML = `<i><b style="width:${pct()}%"></b></i>${pct()}%`;
   }
 
@@ -303,7 +309,7 @@
     if (g === 0) { c.box = 1; c.due = Date.now() + 60e3; fcQueue.splice(Math.min(3, fcQueue.length), 0, t); }
     else if (g === 1) { c.box = Math.max(1, c.box); c.due = Date.now() + 864e5; }
     else { c.box = Math.min(6, c.box + (c.box === 0 ? 2 : 1)); c.due = Date.now() + INTERVALS[c.box] * 864e5; }
-    S.srs[t.term] = c; fcFlip = false; save(); $('#fcStage').innerHTML = fcStage(); const st = $('#fcStats'); if (st) st.textContent = fcStats();
+    c.t = Date.now(); S.srs[t.term] = c; fcFlip = false; save(); $('#fcStage').innerHTML = fcStage(); const st = $('#fcStats'); if (st) st.textContent = fcStats();
     const card = $('#fcCard'); if (card) card.focus({ preventScroll: true });
   }
   let glQuery = '';
@@ -326,11 +332,13 @@
   const API = (() => { try { return localStorage.getItem('zz.api') || ''; } catch (e) { return ''; } })() || M.api || 'https://api.zyeemzia.com';
   async function api(path, body, opts) {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 25000); let res;
-    try { res = await fetch(API + path, Object.assign(body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}, { signal: ctl.signal }, opts || {})); }
+    const headers = {}; if (body) headers['content-type'] = 'application/json'; if (AUTH) headers.authorization = 'Bearer ' + AUTH.token;
+    try { res = await fetch(API + path, Object.assign({ method: body ? 'POST' : 'GET', headers }, body ? { body: JSON.stringify(body) } : {}, { signal: ctl.signal }, opts || {})); }
     catch (e) { throw Object.assign(new Error('Could not reach the ZyeemZia exam server. Check your internet connection and try again.'), { offline: true }); }
     finally { clearTimeout(t); }
     let j = {}; try { j = await res.json(); } catch (e) { /* no body */ }
-    if (!res.ok) throw Object.assign(new Error(j.error || 'The exam server had a problem. Please try again.'), { status: res.status });
+    if (res.status === 401 && AUTH && path !== '/v1/auth/google') signOutLocal('Your sign-in has expired. Please sign in again to keep syncing.');
+    if (!res.ok) throw Object.assign(new Error(j.error || 'The ZyeemZia server had a problem. Please try again.'), { status: res.status });
     return j;
   }
   let EX = null, exTimer = 0, syncT = 0, exStarting = false;
@@ -522,6 +530,106 @@
       <p class="muted" style="margin-top:12px">Complete every deliverable and score ${M.distinctionMark}%+ in the exam to earn your certificate <b>with Distinction</b>.</p>`;
   }
 
+  /* ---------------- account: optional Google sign-in + progress sync ---------------- */
+  const GOOGLE_CLIENT_ID = M.googleClientId || '263569409532-o59be67f62mk9je2kgerpah84kg8vn4e.apps.googleusercontent.com';
+  const saveAuth = () => { try { if (AUTH) localStorage.setItem(AUTH_KEY, JSON.stringify(AUTH)); else localStorage.removeItem(AUTH_KEY); } catch (e) { /* ignore */ } };
+  function signOutLocal(msg) { AUTH = null; saveAuth(); clearTimeout(pushT); lastPushed = ''; renderChrome(); if (location.hash === '#account') render(); if (msg) toast(msg, 6000); }
+  const syncData = () => { const d = JSON.parse(JSON.stringify(S)); delete d.theme; return d; };
+  const syncLabel = () => AUTH && AUTH.synced ? `Last synced ${new Date(AUTH.synced).toLocaleString()}` : 'Not synced yet';
+  function scheduleSync() { if (!AUTH) return; clearTimeout(pushT); pushT = setTimeout(() => pushProgress(), 5000); }
+  async function pushProgress(keepalive) {
+    clearTimeout(pushT); pushT = 0; if (!AUTH) return;
+    const data = syncData(); const body = JSON.stringify(data); if (body === lastPushed) return;
+    try {
+      await api('/v1/progress/' + SLUG, { data }, { method: 'PUT', keepalive: !!keepalive && body.length < 60000 });
+      lastPushed = body; if (AUTH) { AUTH.synced = Date.now(); saveAuth(); } const st = $('#syncState'); if (st) st.textContent = syncLabel();
+    } catch (e) { /* kept on this device; sent again after the next change */ }
+  }
+  async function pullProgress(quiet) {
+    if (!AUTH || pulling) return; pulling = true;
+    try {
+      const j = await api('/v1/progress/' + SLUG); lastPull = Date.now();
+      if (j.data && typeof j.data === 'object') {
+        const merged = mergeState(S, j.data); const changed = JSON.stringify(merged) !== JSON.stringify(S);
+        S = merged; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+        if (changed) { applyTheme(); renderChrome(); const a = document.activeElement; const typing = a && (/^(INPUT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable); if (!typing && !(EX && !EX.done)) render(); }
+      }
+      await pushProgress();
+    } catch (e) { if (!quiet && e.status !== 401) toast(e.message, 6000); }
+    finally { pulling = false; }
+  }
+  // merge this device's progress with the account copy: completion only grows, scores keep the best, edits keep the newest copy
+  function mergeState(local, remote) {
+    const L = normalize(local), R = normalize(remote);
+    const newer = (R._t || 0) > (L._t || 0) ? R : L, older = newer === R ? L : R;
+    const out = normalize(newer); out.theme = L.theme;
+    Object.entries(older.done).forEach(([k, v]) => { if (!out.done[k] || String(v) < String(out.done[k])) out.done[k] = v; });
+    Object.entries(older.quiz).forEach(([k, v]) => { out.quiz[k] = Math.max(+out.quiz[k] || 0, +v || 0); });
+    ['checks', 'notes', 'cells', 'sc'].forEach(f => Object.entries(older[f]).forEach(([k, v]) => { if (!(k in out[f])) out[f][k] = v; }));
+    ['deliv', 'rubric'].forEach(f => Object.entries(older.cap[f]).forEach(([k, v]) => { if (!(k in out.cap[f])) out.cap[f][k] = v; }));
+    if (!out.cap.notes && older.cap.notes) out.cap.notes = older.cap.notes;
+    Object.entries(older.srs).forEach(([k, v]) => { const m = out.srs[k]; if (v && (!m || (v.t || 0) > (m.t || 0))) out.srs[k] = v; });
+    const E = out.exam, O = older.exam;
+    E.best = Math.max(E.best, O.best); E.attempts = Math.max(E.attempts, O.attempts); E.pbest = Math.max(E.pbest || 0, O.pbest || 0);
+    const seen = new Set();
+    E.history = E.history.concat(O.history).filter(h => { if (!h || typeof h !== 'object') return false; const k = h.date + '|' + h.score; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-60);
+    const rank = p => p ? (p.distinction ? 1000 : 0) + (+p.score || 0) : -1;
+    if (rank(O.passed) > rank(E.passed)) E.passed = O.passed;
+    if (!E.unclaimed && O.unclaimed) E.unclaimed = O.unclaimed;
+    if (E.unclaimed && E.passed && (E.unclaimed.attempt === E.passed.attempt || E.unclaimed.score <= E.passed.score)) delete E.unclaimed;
+    if (!out.name && older.name) out.name = older.name;
+    out.xp = Math.max(+out.xp || 0, +older.xp || 0); out._t = Math.max(L._t || 0, R._t || 0);
+    return out;
+  }
+  const inAppBrowser = () => /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|MicroMessenger|; wv\)/i.test(navigator.userAgent);
+  function viewAccount() {
+    if (!AUTH) return `<div class="page-head"><div class="eyebrow">Account</div><h1 class="page-title">Keep your progress on every device</h1><p class="muted">Signing in is optional. With a Google account, your lessons, quiz scores, flashcards, notes, capstone work, exam record and certificate follow you to any phone or computer. Without it, everything stays in this browser only.</p></div>
+      <div class="card list-card acct-card"><div class="eyebrow">Sign in</div>
+        ${inAppBrowser() ? `<div class="callout warning"><span class="ct">Open in your browser</span>Google sign-in does not work inside the Facebook, Messenger or Instagram app. Open this page in Chrome or Safari (menu → Open in browser), then sign in.</div>` : ''}
+        <div id="gsiBtn" class="gsi-slot"><span class="muted">Loading Google sign-in…</span></div>
+        <p class="muted" style="font-size:.85rem;margin:0">ZyeemZia only receives your name, email address and profile picture from Google. Read the <a href="privacy.html">privacy notice</a>.</p></div>`;
+    const u = AUTH.user || {};
+    return `<div class="page-head"><div class="eyebrow">Account</div><h1 class="page-title">Your account</h1><p class="muted">Your ${esc(M.short)} progress is saved to your account and kept in sync on every device where you sign in.</p></div>
+      <div class="card list-card acct-card"><div class="acct-who">${u.picture ? `<img src="${esc(u.picture)}" alt="" width="56" height="56" referrerpolicy="no-referrer">` : `<span class="acct-ini">${esc((u.name || u.email || '?').trim().charAt(0).toUpperCase())}</span>`}<div><b>${esc(u.name || '')}</b><br><span class="muted">${esc(u.email || '')}</span></div></div>
+        <p class="muted" id="syncState" style="margin:0">${esc(syncLabel())}</p>
+        <div class="hero-actions"><button class="btn btn-primary" type="button" data-acct="sync">Sync now</button><button class="btn" type="button" data-acct="out">Sign out</button></div></div>
+      <div class="card list-card"><div class="eyebrow">Your ZyeemZia certificates</div><div id="acctCerts"><p class="muted">Loading…</p></div></div>
+      <div class="card list-card"><div class="eyebrow">Privacy</div><p class="muted">Read the <a href="privacy.html">privacy notice</a>. Deleting your account removes your sign-in details and synced progress from ZyeemZia's servers. Issued certificates stay valid and verifiable, because they are public records. Progress on this device is kept.</p><span id="delSlot"><button class="btn btn-sm" type="button" data-acct="delask">Delete my account</button></span></div>`;
+  }
+  async function mountAccount() {
+    if (!AUTH) { mountGoogleButton(); return; }
+    try {
+      const j = await api('/v1/me'); if (j.user && AUTH) { AUTH.user = j.user; saveAuth(); renderChrome(); }
+      const el = $('#acctCerts'); if (!el) return; const cs = j.certificates || [];
+      el.innerHTML = cs.length ? `<div class="req">${cs.map(c => `<a class="req-i ok" href="https://${esc(c.domain)}/#verify/${encodeURIComponent(c.id)}" style="text-decoration:none;color:inherit"><span class="st">✓</span><span><b>${esc(c.trackName)}</b><br><small class="muted">${esc(c.id)} · ${esc(c.date)} · ${c.score}%${c.distinction ? ' · Distinction' : ''}${c.revoked ? ' · revoked' : ''}</small></span>${icon('arrowR')}</a>`).join('')}</div>`
+        : `<p class="muted" style="margin:0">No certificates yet. Certificates you claim while signed in appear here, from every ZyeemZia track.</p>`;
+    } catch (e) { const el = $('#acctCerts'); if (el) el.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+  }
+  let gisP = null;
+  const loadGIS = () => gisP || (gisP = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = () => res(); sc.onerror = () => { gisP = null; rej(new Error('Could not load Google sign-in. Check your internet connection and try again.')); }; document.head.appendChild(sc); }));
+  async function mountGoogleButton() {
+    const el = $('#gsiBtn'); if (!el) return;
+    try {
+      await loadGIS(); const slot = $('#gsiBtn'); if (!slot || !(window.google && google.accounts && google.accounts.id)) return;
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential, ux_mode: 'popup', auto_select: false, cancel_on_tap_outside: true, itp_support: true });
+      slot.innerHTML = ''; google.accounts.id.renderButton(slot, { theme: isDark() ? 'filled_black' : 'outline', size: 'large', type: 'standard', text: 'signin_with', shape: 'pill', logo_alignment: 'left', width: Math.max(220, Math.min(340, slot.clientWidth || 300)) });
+    } catch (e) { el.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+  }
+  async function onGoogleCredential(resp) {
+    try {
+      const j = await api('/v1/auth/google', { credential: resp && resp.credential });
+      AUTH = { token: j.token, user: j.user }; saveAuth(); lastPushed = '';
+      toast(`Signed in as ${j.user.name || j.user.email}. Syncing your progress…`, 4000);
+      await pullProgress(); renderChrome(); if (location.hash === '#account') render();
+    } catch (e) { toast(e.message, 7000); }
+  }
+  async function signOut() {
+    try { await pushProgress(); await api('/v1/auth/logout', {}); } catch (e) { /* sign out on this device anyway */ }
+    try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* ignore */ }
+    signOutLocal('Signed out. Your progress stays on this device.');
+  }
+  async function deleteAccount() { try { await api('/v1/me', null, { method: 'DELETE' }); signOutLocal('Your account and synced progress were deleted.'); } catch (e) { toast(e.message, 7000); } }
+
   /* ---------------- certificate ---------------- */
   const credId = () => (S.exam.passed && S.exam.passed.id) || '';
   const verifyURL = id => `https://${M.domain}/#verify/${encodeURIComponent(id)}`;
@@ -620,6 +728,7 @@
   function viewSettings() {
     return `<div class="page-head"><div class="eyebrow">Settings</div><h1 class="page-title">Progress & settings</h1></div>
       <div class="two"><div class="card list-card"><div class="eyebrow">Progress</div><p>${doneCount()}/${D.lessons.length} lessons · best official exam ${S.exam.best}% · best practice exam ${S.exam.pbest}% · ${Object.keys(S.srs).length} flashcards studied</p><div class="bar"><i style="width:${pct()}%"></i></div></div>
+        <div class="card list-card"><div class="eyebrow">Sync across devices</div><p>${AUTH ? `Signed in as <b>${esc((AUTH.user && (AUTH.user.name || AUTH.user.email)) || '')}</b>. Your progress is synced.` : 'Sign in with Google (optional) to keep your progress on every device.'}</p><a class="btn btn-sm" href="#account">${AUTH ? 'Manage account' : 'Sign in'}</a></div>
         <div class="card list-card"><div class="eyebrow">Theme</div><div class="chips">${['auto', 'light', 'dark'].map(t => `<button class="btn btn-sm ${S.theme === t ? 'btn-primary' : ''}" type="button" data-theme-set="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div></div>
         <div class="card list-card"><div class="eyebrow">Reset</div><p class="muted">Erase lessons, exam results, notes and flashcards on this device. An issued certificate stays valid: restore it later with its credential ID.</p><span id="resetSlot"><button class="btn btn-sm" type="button" data-reset="ask">Reset progress</button></span></div></div>`;
   }
@@ -644,8 +753,8 @@
     const [r, arg] = location.hash.slice(1).split('/');
     // a finished exam shows its result once; coming back later shows the exam start page again
     if (EX && EX.done && r !== 'exam' && !EX.unseen) EX = null;
-    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify }[r || ''] || notFound;
-    view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg);
+    const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify, account: viewAccount }[r || ''] || notFound;
+    view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg); if (r === 'account') mountAccount();
     const back = ev && !linkNav && scrollMem[location.hash || '#'] != null; linkNav = false;
     window.scrollTo({ top: back ? scrollMem[location.hash || '#'] : 0, behavior: 'auto' });
     if (ev && !reduced()) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); }
@@ -691,6 +800,15 @@
     const fg = t.closest('[data-fc]'); if (fg) { fcGrade(+fg.dataset.fc); return; }
     const xs = t.closest('[data-exstart]'); if (xs) { examStart(xs.dataset.exstart); return; }
     if (t.closest('[data-upgrade]')) { upgradeCert(); return; }
+    const ac = t.closest('[data-acct]'); if (ac) {
+      const a = ac.dataset.acct;
+      if (a === 'sync') { ac.disabled = true; pullProgress().then(() => { toast('Synced.'); render(); }); }
+      else if (a === 'out') signOut();
+      else if (a === 'delask') $('#delSlot').innerHTML = `<span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" type="button" data-acct="delno">Cancel</button><button class="btn btn-sm" type="button" data-acct="del" style="background:var(--bad);color:#fff;border-color:transparent">Yes, delete my account</button></span>`;
+      else if (a === 'del') deleteAccount();
+      else render();
+      return;
+    }
     const xa = t.closest('[data-exans]'); if (xa && EX && !EX.done) { examAnswer(+xa.dataset.exans); return; }
     const xg = t.closest('[data-exgo]'); if (xg && EX && !EX.done) { examGo(+xg.dataset.exgo); return; }
     if (t.closest('[data-exflag]') && EX && !EX.done) { examFlag(); return; }
@@ -710,7 +828,7 @@
     }
     const rs = t.closest('[data-reset]'); if (rs) {
       if (rs.dataset.reset === 'ask') $('#resetSlot').innerHTML = `<span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm" type="button" data-reset="no">Cancel</button><button class="btn btn-sm" type="button" data-reset="yes" style="background:var(--bad);color:#fff;border-color:transparent">Yes, erase everything</button></span>`;
-      else if (rs.dataset.reset === 'yes') { S = Object.assign(defaults(), { theme: S.theme }); save(); clearInterval(exTimer); EX = null; saveEX(); render(); toast('Progress reset.'); }
+      else if (rs.dataset.reset === 'yes') { S = Object.assign(defaults(), { theme: S.theme }); save(); if (AUTH) pushProgress(); clearInterval(exTimer); EX = null; saveEX(); render(); toast('Progress reset.'); }
       else render();
     }
   });
@@ -740,6 +858,7 @@
   addEventListener('scroll', onScroll, { passive: true });
   // keep two open tabs in step instead of overwriting each other's progress
   addEventListener('storage', e => {
+    if (e.key === AUTH_KEY) { AUTH = readAuth(); renderChrome(); if (location.hash === '#account') render(); return; }
     if (e.key !== KEY) return; S = loadState(); applyTheme(); renderChrome();
     const a = document.activeElement; const typing = a && (/^(INPUT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable);
     if (!typing && !(EX && !EX.done)) render();
@@ -747,13 +866,15 @@
   // never lose the last keystrokes when the tab is closed or hidden
   const flush = () => { if (saveT) save(); };
   addEventListener('pagehide', flush);
-  addEventListener('pagehide', () => { if (official() && !EX.done) syncEX(true); });
+  addEventListener('pagehide', () => { if (official() && !EX.done) syncEX(true); if (AUTH && pushT) pushProgress(true); });
+  // coming back to the tab: fetch changes made on other devices
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && AUTH && Date.now() - lastPull > 60e3) pullProgress(true); else if (document.visibilityState === 'hidden' && AUTH && pushT) pushProgress(true); });
   addEventListener('online', () => { if (official() && !EX.done && EX.pending) examSubmit(EX.end <= Date.now(), true); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
   const mq = matchMedia('(prefers-color-scheme: dark)'); const onMQ = () => { if (S.theme === 'auto') renderChrome(); };
   if (mq.addEventListener) mq.addEventListener('change', onMQ); else if (mq.addListener) mq.addListener(onMQ);
   const disc = $('#disc'); if (disc) disc.textContent = M.disclaimer || '';
-  applyTheme(); restoreEX(); route();
+  applyTheme(); restoreEX(); route(); if (AUTH) pullProgress(true);
   // offline + instant repeat visits on the live site
   if ('serviceWorker' in navigator && location.protocol === 'https:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { /* optional */ }));
 })();
