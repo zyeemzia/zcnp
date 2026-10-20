@@ -145,6 +145,198 @@ TRACK.modules.push({
      "text": "A **distribution block** is one pair of distribution switches plus the access switches beneath them. It is also a failure domain: a broadcast storm or misconfiguration inside one block should never spill into the core or into other blocks. Summarising the block's address space at the distribution layer reinforces this — the core sees one route per block, so a flapping access subnet does not ripple through the whole routing domain."
     },
     {
+     "type": "topology",
+     "title": "Three-tier campus: two distribution blocks and a core pair",
+     "nodes": [
+      {
+       "id": "c1",
+       "kind": "l3switch",
+       "label": "Core 1",
+       "x": 2.5,
+       "y": 0,
+       "sub": "10.255.0.1"
+      },
+      {
+       "id": "c2",
+       "kind": "l3switch",
+       "label": "Core 2",
+       "x": 4.5,
+       "y": 0,
+       "sub": "10.255.0.2"
+      },
+      {
+       "id": "da1",
+       "kind": "l3switch",
+       "label": "Dist A1",
+       "x": 0.5,
+       "y": 1.5,
+       "sub": "summarises 10.20.0.0/16"
+      },
+      {
+       "id": "da2",
+       "kind": "l3switch",
+       "label": "Dist A2",
+       "x": 2.5,
+       "y": 1.5,
+       "sub": "VRRP backup"
+      },
+      {
+       "id": "db1",
+       "kind": "l3switch",
+       "label": "Dist B1",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "summarises 10.30.0.0/16"
+      },
+      {
+       "id": "db2",
+       "kind": "l3switch",
+       "label": "Dist B2",
+       "x": 6.5,
+       "y": 1.5,
+       "sub": "VRRP backup"
+      },
+      {
+       "id": "aa1",
+       "kind": "switch",
+       "label": "Access A-1",
+       "x": 0.5,
+       "y": 3,
+       "sub": "floor 1"
+      },
+      {
+       "id": "aa2",
+       "kind": "switch",
+       "label": "Access A-2",
+       "x": 2.5,
+       "y": 3,
+       "sub": "floor 2"
+      },
+      {
+       "id": "ab1",
+       "kind": "switch",
+       "label": "Access B-1",
+       "x": 4.5,
+       "y": 3,
+       "sub": "floor 1"
+      },
+      {
+       "id": "ab2",
+       "kind": "switch",
+       "label": "Access B-2",
+       "x": 6.5,
+       "y": 3,
+       "sub": "floor 2"
+      }
+     ],
+     "links": [
+      {
+       "a": "c1",
+       "b": "c2",
+       "label": "routed"
+      },
+      {
+       "a": "c1",
+       "b": "da1"
+      },
+      {
+       "a": "c1",
+       "b": "da2"
+      },
+      {
+       "a": "c1",
+       "b": "db1"
+      },
+      {
+       "a": "c1",
+       "b": "db2"
+      },
+      {
+       "a": "c2",
+       "b": "da1"
+      },
+      {
+       "a": "c2",
+       "b": "da2"
+      },
+      {
+       "a": "c2",
+       "b": "db1"
+      },
+      {
+       "a": "c2",
+       "b": "db2"
+      },
+      {
+       "a": "da1",
+       "b": "da2",
+       "label": "L2 trunk"
+      },
+      {
+       "a": "db1",
+       "b": "db2",
+       "label": "L2 trunk"
+      },
+      {
+       "a": "aa1",
+       "b": "da1"
+      },
+      {
+       "a": "aa1",
+       "b": "da2"
+      },
+      {
+       "a": "aa2",
+       "b": "da1"
+      },
+      {
+       "a": "aa2",
+       "b": "da2"
+      },
+      {
+       "a": "ab1",
+       "b": "db1"
+      },
+      {
+       "a": "ab1",
+       "b": "db2"
+      },
+      {
+       "a": "ab2",
+       "b": "db1"
+      },
+      {
+       "a": "ab2",
+       "b": "db2"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Core",
+       "x": 2,
+       "y": 0,
+       "w": 3,
+       "h": 1,
+       "tone": "accent"
+      },
+      {
+       "label": "Block A (building 1)",
+       "x": 0.5,
+       "y": 1.5,
+       "w": 3,
+       "h": 2.5
+      },
+      {
+       "label": "Block B (building 2)",
+       "x": 4.5,
+       "y": 1.5,
+       "w": 3,
+       "h": 2.5
+      }
+     ],
+     "caption": "Every access switch is dual-homed inside its own block, and every distribution switch is dual-homed to both core switches. Blocks never link to each other, so the core sees one summary per block and a fault stays inside the block where it started."
+    },
+    {
      "type": "compare",
      "columns": [
       {
@@ -334,6 +526,187 @@ TRACK.modules.push({
      "title": "Spine-leaf rules"
     },
     {
+     "type": "topology",
+     "title": "Spine-leaf fabric with a border leaf",
+     "nodes": [
+      {
+       "id": "s1",
+       "kind": "l3switch",
+       "label": "Spine 1",
+       "x": 0.5,
+       "y": 0
+      },
+      {
+       "id": "s2",
+       "kind": "l3switch",
+       "label": "Spine 2",
+       "x": 2.5,
+       "y": 0
+      },
+      {
+       "id": "s3",
+       "kind": "l3switch",
+       "label": "Spine 3",
+       "x": 4.5,
+       "y": 0
+      },
+      {
+       "id": "s4",
+       "kind": "l3switch",
+       "label": "Spine 4",
+       "x": 6.5,
+       "y": 0
+      },
+      {
+       "id": "l1",
+       "kind": "l3switch",
+       "label": "Leaf 1",
+       "x": 0.5,
+       "y": 2.5,
+       "sub": "rack 1"
+      },
+      {
+       "id": "l2",
+       "kind": "l3switch",
+       "label": "Leaf 2",
+       "x": 2.5,
+       "y": 2.5,
+       "sub": "rack 2"
+      },
+      {
+       "id": "l3",
+       "kind": "l3switch",
+       "label": "Leaf 3",
+       "x": 4.5,
+       "y": 2.5,
+       "sub": "rack 3"
+      },
+      {
+       "id": "bl",
+       "kind": "l3switch",
+       "label": "Border leaf",
+       "x": 6.5,
+       "y": 2.5,
+       "sub": "WAN, internet, FW"
+      },
+      {
+       "id": "h1",
+       "kind": "server",
+       "label": "Hypervisors",
+       "x": 0.5,
+       "y": 4
+      },
+      {
+       "id": "h2",
+       "kind": "server",
+       "label": "App servers",
+       "x": 2.5,
+       "y": 4
+      },
+      {
+       "id": "st",
+       "kind": "storage",
+       "label": "Storage",
+       "x": 4.5,
+       "y": 4
+      },
+      {
+       "id": "fw",
+       "kind": "firewall",
+       "label": "Firewall",
+       "x": 6.5,
+       "y": 4,
+       "sub": "to WAN and internet"
+      }
+     ],
+     "links": [
+      {
+       "a": "l1",
+       "b": "s1"
+      },
+      {
+       "a": "l1",
+       "b": "s2"
+      },
+      {
+       "a": "l1",
+       "b": "s3"
+      },
+      {
+       "a": "l1",
+       "b": "s4"
+      },
+      {
+       "a": "l2",
+       "b": "s1"
+      },
+      {
+       "a": "l2",
+       "b": "s2"
+      },
+      {
+       "a": "l2",
+       "b": "s3"
+      },
+      {
+       "a": "l2",
+       "b": "s4"
+      },
+      {
+       "a": "l3",
+       "b": "s1"
+      },
+      {
+       "a": "l3",
+       "b": "s2"
+      },
+      {
+       "a": "l3",
+       "b": "s3"
+      },
+      {
+       "a": "l3",
+       "b": "s4"
+      },
+      {
+       "a": "bl",
+       "b": "s1"
+      },
+      {
+       "a": "bl",
+       "b": "s2"
+      },
+      {
+       "a": "bl",
+       "b": "s3"
+      },
+      {
+       "a": "bl",
+       "b": "s4"
+      },
+      {
+       "a": "l1",
+       "b": "h1",
+       "label": "25G"
+      },
+      {
+       "a": "l2",
+       "b": "h2",
+       "label": "25G"
+      },
+      {
+       "a": "l3",
+       "b": "st",
+       "label": "25G"
+      },
+      {
+       "a": "bl",
+       "b": "fw"
+      }
+     ],
+     "caption": "Each leaf has one uplink to each of the four spines, so any leaf reaches any other leaf in exactly two hops over four equal-cost paths. Nothing attaches to a spine except leaves; external services hang off the border leaf."
+    },
+    {
      "type": "layers",
      "items": [
       {
@@ -410,7 +783,13 @@ TRACK.modules.push({
     },
     {
      "type": "text",
-     "text": "The **underlay** of a spine-leaf fabric is usually a simple routed network: point-to-point /31 links, loopbacks for each switch, and either OSPF, IS-IS or eBGP as the routing protocol. eBGP underlays, with a private AS number per leaf (or per rack) and one shared AS for the spines, are common in very large fabrics because BGP's policy and scale are well suited to thousands of links. Layer 2 services for workloads are then delivered as an **overlay**, typically VXLAN with an EVPN control plane — covered in the Overlay cell."
+     "text": "The **underlay** of a spine-leaf fabric is usually a simple routed network: point-to-point /31 links, loopbacks for each switch, and either OSPF, IS-IS or eBGP as the routing protocol. eBGP underlays, with a private AS number per leaf (or per rack) and one shared AS for the spines, are common in very large fabrics (the approach is documented in RFC 7938) because BGP's policy and scale are well suited to thousands of links. Layer 2 services for workloads are then delivered as an **overlay**, typically VXLAN with an EVPN control plane — covered in the Overlay cell."
+    },
+    {
+     "type": "callout",
+     "kind": "pro",
+     "title": "AI and GPU back-end fabrics",
+     "text": "Clusters for AI training and large-scale inference are usually built as a **separate back-end fabric** next to the normal front-end fabric. They follow the same Clos rules but are designed non-blocking (1:1), at 400G or 800G per port, often rail-optimised so that each GPU position connects to its own leaf, and they must stay nearly lossless under congestion: RoCEv2 with ECN and priority flow control today, with newer Ethernet transports defined by industry specifications such as Ultra Ethernet starting to appear. Size these fabrics with the workload team; a 3:1 general-purpose ratio would starve them."
     },
     {
      "type": "cli",
@@ -659,6 +1038,107 @@ TRACK.modules.push({
      "title": "Multi-chassis link aggregation"
     },
     {
+     "type": "topology",
+     "title": "Multi-chassis link aggregation at the distribution pair",
+     "nodes": [
+      {
+       "id": "ds1",
+       "kind": "l3switch",
+       "label": "DS1",
+       "x": 1.5,
+       "y": 1,
+       "sub": "VLAN 20 gateway"
+      },
+      {
+       "id": "ds2",
+       "kind": "l3switch",
+       "label": "DS2",
+       "x": 4,
+       "y": 1,
+       "sub": "VLAN 20 gateway"
+      },
+      {
+       "id": "as1",
+       "kind": "switch",
+       "label": "AS1",
+       "x": 1.5,
+       "y": 2.5,
+       "sub": "Po1: 2 × 10G"
+      },
+      {
+       "id": "as2",
+       "kind": "switch",
+       "label": "AS2",
+       "x": 4,
+       "y": 2.5,
+       "sub": "Po2: 2 × 10G"
+      },
+      {
+       "id": "u1",
+       "kind": "laptop",
+       "label": "Ward A devices",
+       "x": 1.5,
+       "y": 3.5
+      },
+      {
+       "id": "u2",
+       "kind": "laptop",
+       "label": "Ward B devices",
+       "x": 4,
+       "y": 3.5
+      }
+     ],
+     "links": [
+      {
+       "a": "ds1",
+       "b": "ds2",
+       "label": "peer link",
+       "style": "bold"
+      },
+      {
+       "a": "as1",
+       "b": "ds1",
+       "label": "Po1",
+       "aEnd": "Te1/1/1"
+      },
+      {
+       "a": "as1",
+       "b": "ds2",
+       "aEnd": "Te1/1/2"
+      },
+      {
+       "a": "as2",
+       "b": "ds2",
+       "label": "Po2",
+       "aEnd": "Te1/1/1"
+      },
+      {
+       "a": "as2",
+       "b": "ds1",
+       "aEnd": "Te1/1/2"
+      },
+      {
+       "a": "u1",
+       "b": "as1"
+      },
+      {
+       "a": "u2",
+       "b": "as2"
+      }
+     ],
+     "zones": [
+      {
+       "label": "One LACP system (MC-LAG pair)",
+       "x": 1.5,
+       "y": 1,
+       "w": 3.5,
+       "h": 1,
+       "tone": "accent"
+      }
+     ],
+     "caption": "Each access switch bundles one uplink to DS1 and one to DS2 into a single port channel, so both links forward and spanning tree sees one logical link. The peer link keeps the two control planes synchronised; it is not a path for normal user traffic."
+    },
+    {
      "type": "compare",
      "columns": [
       {
@@ -719,6 +1199,29 @@ TRACK.modules.push({
       }
      ],
      "title": "Failure detection time"
+    },
+    {
+     "type": "chart",
+     "kind": "bar",
+     "title": "Time to detect a silent neighbour failure",
+     "labels": [
+      "OSPF defaults (hello 10 s)",
+      "OSPF tuned (hello 1 s, dead 4 s)",
+      "BFD 300 ms × 3"
+     ],
+     "series": [
+      {
+       "name": "Detection time",
+       "values": [
+        40,
+        4,
+        0.9
+       ]
+      }
+     ],
+     "unit": " s",
+     "yLabel": "Seconds",
+     "caption": "Worst-case detection calculated from the timer values in this lesson, not measured results. When a link fails without losing light (for example a fault behind a media converter), only the protocol timers can notice, which is why BFD matters."
     },
     {
      "type": "text",
@@ -842,7 +1345,7 @@ TRACK.modules.push({
    "blocks": [
     {
      "type": "text",
-     "text": "A **fabric-based campus** applies data-centre ideas to the enterprise LAN. A simple routed **underlay** provides reachability between switch loopbacks. An **overlay** — typically VXLAN encapsulation (RFC 7348) with a control plane that maps endpoints to their location — carries user traffic, so a user's subnet can appear anywhere without stretching VLANs. A **policy plane** classifies users and devices into groups and enforces rules between groups, regardless of IP address."
+     "text": "A **fabric-based campus** applies data-centre ideas to the enterprise LAN. A simple routed **underlay** provides reachability between switch loopbacks. An **overlay** — typically VXLAN encapsulation (RFC 7348) with a control plane that maps endpoints to their location, most often BGP EVPN (RFC 7432 and RFC 8365) and on some platforms a LISP-style map server — carries user traffic, so a user's subnet can appear anywhere without stretching VLANs. A **policy plane** classifies users and devices into groups and enforces rules between groups, regardless of IP address."
     },
     {
      "type": "layers",
@@ -912,9 +1415,180 @@ TRACK.modules.push({
      "title": "Fabric roles"
     },
     {
+     "type": "topology",
+     "title": "EVPN-VXLAN fabric campus",
+     "nodes": [
+      {
+       "id": "ext",
+       "kind": "cloud",
+       "label": "External networks",
+       "x": 3.5,
+       "y": 0,
+       "sub": "WAN, data centre, internet"
+      },
+      {
+       "id": "pol",
+       "kind": "idp",
+       "label": "Policy server",
+       "x": 0.5,
+       "y": 1.5,
+       "sub": "RADIUS, group tags"
+      },
+      {
+       "id": "b1",
+       "kind": "l3switch",
+       "label": "Border 1",
+       "x": 2.5,
+       "y": 1.5,
+       "sub": "VRF hand-off"
+      },
+      {
+       "id": "b2",
+       "kind": "l3switch",
+       "label": "Border 2",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "VRF hand-off"
+      },
+      {
+       "id": "cp",
+       "kind": "controller",
+       "label": "Control plane",
+       "x": 6.5,
+       "y": 1.5,
+       "sub": "BGP EVPN route reflector"
+      },
+      {
+       "id": "i1",
+       "kind": "l3switch",
+       "label": "Intermediate 1",
+       "x": 2.5,
+       "y": 3,
+       "sub": "underlay only"
+      },
+      {
+       "id": "i2",
+       "kind": "l3switch",
+       "label": "Intermediate 2",
+       "x": 4.5,
+       "y": 3,
+       "sub": "underlay only"
+      },
+      {
+       "id": "e1",
+       "kind": "switch",
+       "label": "Edge 1",
+       "x": 1.5,
+       "y": 4.5,
+       "sub": "VTEP, 802.1X"
+      },
+      {
+       "id": "e2",
+       "kind": "switch",
+       "label": "Edge 2",
+       "x": 5.5,
+       "y": 4.5,
+       "sub": "VTEP, 802.1X"
+      },
+      {
+       "id": "pc",
+       "kind": "laptop",
+       "label": "Finance laptop",
+       "x": 1.5,
+       "y": 6,
+       "sub": "group: Finance"
+      },
+      {
+       "id": "ap",
+       "kind": "ap",
+       "label": "Access point",
+       "x": 5.5,
+       "y": 6,
+       "sub": "group: Staff Wi-Fi"
+      }
+     ],
+     "links": [
+      {
+       "a": "ext",
+       "b": "b1"
+      },
+      {
+       "a": "ext",
+       "b": "b2"
+      },
+      {
+       "a": "pol",
+       "b": "b1",
+       "label": "RADIUS",
+       "style": "dashed"
+      },
+      {
+       "a": "b2",
+       "b": "cp"
+      },
+      {
+       "a": "b1",
+       "b": "i1"
+      },
+      {
+       "a": "b1",
+       "b": "i2"
+      },
+      {
+       "a": "b2",
+       "b": "i1"
+      },
+      {
+       "a": "b2",
+       "b": "i2"
+      },
+      {
+       "a": "i1",
+       "b": "e1"
+      },
+      {
+       "a": "i1",
+       "b": "e2"
+      },
+      {
+       "a": "i2",
+       "b": "e1"
+      },
+      {
+       "a": "i2",
+       "b": "e2"
+      },
+      {
+       "a": "e1",
+       "b": "e2",
+       "label": "VXLAN tunnel",
+       "style": "tunnel"
+      },
+      {
+       "a": "pc",
+       "b": "e1"
+      },
+      {
+       "a": "ap",
+       "b": "e2"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Fabric site",
+       "x": 1.5,
+       "y": 1.5,
+       "w": 6,
+       "h": 3.5,
+       "tone": "accent"
+      }
+     ],
+     "caption": "Edge nodes authenticate endpoints, learn their group and encapsulate traffic in VXLAN; intermediate nodes only route the underlay. The control-plane node tells each edge where an endpoint lives, and the borders hand each virtual network to the outside world as a separate VRF."
+    },
+    {
      "type": "callout",
      "kind": "insight",
-     "text": "IP addresses change with DHCP, roaming and cloud workloads. Writing rules as 'Finance users may reach the finance application group' rather than as long address-based ACLs keeps policy stable while addressing moves. Group tags travel with the traffic inside the overlay header in many implementations.",
+     "text": "IP addresses change with DHCP, roaming and cloud workloads. Writing rules as 'Finance users may reach the finance application group' rather than as long address-based ACLs keeps policy stable while addressing moves. In many implementations the source group tag travels with the traffic inside the VXLAN header (a group-policy extension), so any fabric node can enforce the rule without looking up the sender again.",
      "title": "Why policy follows groups"
     },
     {
@@ -958,6 +1632,141 @@ TRACK.modules.push({
      "title": "Enterprise edge modules"
     },
     {
+     "type": "topology",
+     "title": "Enterprise edge modules around the core",
+     "nodes": [
+      {
+       "id": "inet",
+       "kind": "internet",
+       "label": "Internet",
+       "x": 1,
+       "y": 0,
+       "sub": "ISP A and ISP B"
+      },
+      {
+       "id": "wan",
+       "kind": "cloud",
+       "label": "WAN transport",
+       "x": 3.5,
+       "y": 0,
+       "sub": "MPLS, broadband, LTE/5G"
+      },
+      {
+       "id": "csp",
+       "kind": "cloud",
+       "label": "Public cloud",
+       "x": 6,
+       "y": 0,
+       "sub": "cloud regions"
+      },
+      {
+       "id": "ier",
+       "kind": "router",
+       "label": "Internet edge",
+       "x": 1,
+       "y": 1.5,
+       "sub": "eBGP, RPKI ROV"
+      },
+      {
+       "id": "wer",
+       "kind": "router",
+       "label": "WAN edge",
+       "x": 3.5,
+       "y": 1.5,
+       "sub": "SD-WAN / MPLS"
+      },
+      {
+       "id": "cer",
+       "kind": "router",
+       "label": "Cloud edge",
+       "x": 6,
+       "y": 1.5,
+       "sub": "private interconnect"
+      },
+      {
+       "id": "fw",
+       "kind": "firewall",
+       "label": "Edge firewall",
+       "x": 1,
+       "y": 3,
+       "sub": "outside, DMZ, inside"
+      },
+      {
+       "id": "core",
+       "kind": "l3switch",
+       "label": "Core pair",
+       "x": 3.5,
+       "y": 3.5
+      },
+      {
+       "id": "dmz",
+       "kind": "server",
+       "label": "DMZ services",
+       "x": 1,
+       "y": 5,
+       "sub": "web, mail relay"
+      },
+      {
+       "id": "camp",
+       "kind": "team",
+       "label": "Campus blocks",
+       "x": 3.5,
+       "y": 5,
+       "sub": "users and devices"
+      }
+     ],
+     "links": [
+      {
+       "a": "inet",
+       "b": "ier"
+      },
+      {
+       "a": "wan",
+       "b": "wer"
+      },
+      {
+       "a": "csp",
+       "b": "cer"
+      },
+      {
+       "a": "ier",
+       "b": "fw"
+      },
+      {
+       "a": "fw",
+       "b": "dmz"
+      },
+      {
+       "a": "fw",
+       "b": "core"
+      },
+      {
+       "a": "wer",
+       "b": "core"
+      },
+      {
+       "a": "cer",
+       "b": "core",
+       "label": "route filters"
+      },
+      {
+       "a": "core",
+       "b": "camp"
+      }
+     ],
+     "zones": [
+      {
+       "label": "DMZ",
+       "x": 0.5,
+       "y": 5,
+       "w": 1.5,
+       "h": 1,
+       "tone": "warn"
+      }
+     ],
+     "caption": "Each edge is a separate module that joins the core, never a user access switch. Internet traffic always passes the firewall, the DMZ hangs off the firewall rather than the core, and cloud routes are filtered in both directions."
+    },
+    {
      "type": "flow",
      "items": [
       {
@@ -970,7 +1779,7 @@ TRACK.modules.push({
       },
       {
        "label": "Local internet breakout",
-       "text": "Security inspection or cloud security service"
+       "text": "SSE/SASE cloud security (secure web gateway, CASB, ZTNA) or a local firewall"
       },
       {
        "label": "Provider network",
@@ -1019,7 +1828,7 @@ TRACK.modules.push({
       [
        "Heavy SaaS and cloud use",
        "Most traffic leaves the enterprise",
-       "Local internet breakout with cloud security",
+       "Local internet breakout with SSE/SASE cloud security",
        "Distributed security policy to manage"
       ]
      ],
@@ -1162,6 +1971,17 @@ TRACK.modules.push({
        "term": "Group-based policy",
        "def": "Access rules written between groups of users or devices rather than between IP addresses."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "A fabric campus separates a routed underlay, a VXLAN overlay and a group-based policy plane.",
+      "Edge nodes authenticate and encapsulate; intermediate nodes only route; borders hand virtual networks to the outside as VRFs.",
+      "WAN, internet, DMZ and cloud edges are separate modules attached to the core, each with its own policy.",
+      "SaaS-heavy branches break out locally with SSE/SASE inspection instead of backhauling to head office.",
+      "Record every major choice and its trade-offs in an architecture decision record."
      ]
     },
     {
@@ -1340,6 +2160,75 @@ TRACK.modules.push({
      "title": "Root and port selection"
     },
     {
+     "type": "topology",
+     "title": "RSTP roles in a distribution triangle (VLAN 10)",
+     "nodes": [
+      {
+       "id": "ds1",
+       "kind": "l3switch",
+       "label": "DS1 (root)",
+       "x": 1.5,
+       "y": 0,
+       "sub": "priority 24576"
+      },
+      {
+       "id": "ds2",
+       "kind": "l3switch",
+       "label": "DS2",
+       "x": 4.5,
+       "y": 0,
+       "sub": "priority 28672, cost 2000"
+      },
+      {
+       "id": "as1",
+       "kind": "switch",
+       "label": "AS1",
+       "x": 3,
+       "y": 2,
+       "sub": "priority 32768, cost 2000"
+      },
+      {
+       "id": "pc",
+       "kind": "laptop",
+       "label": "Host",
+       "x": 3,
+       "y": 3.5
+      }
+     ],
+     "links": [
+      {
+       "a": "ds1",
+       "b": "ds2",
+       "label": "10G",
+       "style": "solid",
+       "aEnd": "Desg",
+       "bEnd": "Root"
+      },
+      {
+       "a": "ds1",
+       "b": "as1",
+       "label": "10G",
+       "style": "solid",
+       "aEnd": "Desg",
+       "bEnd": "Root"
+      },
+      {
+       "a": "ds2",
+       "b": "as1",
+       "label": "10G",
+       "style": "dashed",
+       "aEnd": "Desg",
+       "bEnd": "Altn"
+      },
+      {
+       "a": "as1",
+       "b": "pc",
+       "aEnd": "Desg, edge"
+      }
+     ],
+     "caption": "All root-bridge ports are designated. On the DS2–AS1 segment both switches advertise cost 2000, so the lower bridge ID (DS2) wins designated and AS1's port becomes the alternate: discarding, but ready to take over at once if AS1's root port fails."
+    },
+    {
      "type": "formula",
      "items": [
       {
@@ -1356,30 +2245,50 @@ TRACK.modules.push({
      "title": "Path cost and bridge ID"
     },
     {
-     "type": "flow",
-     "items": [
+     "type": "sequence",
+     "title": "Proposal/agreement on a point-to-point link",
+     "actors": [
+      "DS1 (upstream)",
+      "AS1 (downstream)",
+      "AS2 (next switch)"
+     ],
+     "steps": [
       {
-       "label": "Proposal",
-       "text": "Upstream designated port sends a BPDU with the proposal flag"
+       "from": 0,
+       "to": 1,
+       "label": "BPDU with proposal flag",
+       "note": "DS1 port is designated, discarding"
       },
       {
-       "label": "Sync",
-       "text": "Downstream bridge moves its non-edge designated ports to discarding"
+       "from": 1,
+       "to": 1,
+       "label": "Sync: block non-edge designated ports"
       },
       {
+       "from": 1,
+       "to": 0,
+       "label": "BPDU with agreement flag",
+       "note": "sent from AS1's root port",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 0,
+       "label": "Designated port to forwarding at once"
+      },
+      {
+       "from": 1,
+       "to": 2,
+       "label": "Proposal on next link"
+      },
+      {
+       "from": 2,
+       "to": 1,
        "label": "Agreement",
-       "text": "Downstream root port replies with the agreement flag"
-      },
-      {
-       "label": "Forward",
-       "text": "Upstream port goes straight to forwarding"
-      },
-      {
-       "label": "Ripple",
-       "text": "The handshake repeats on the next link down the tree"
+       "reply": true
       }
      ],
-     "title": "Proposal/agreement on a point-to-point link"
+     "caption": "No timers are involved: each link goes to forwarding as soon as the handshake completes, and the sync step guarantees no loop can form while the wave ripples down the tree."
     },
     {
      "type": "callout",
@@ -1572,6 +2481,79 @@ TRACK.modules.push({
      "kind": "definition",
      "text": "Switches are in the same region only if the **name**, **revision number** and the **VLAN-to-instance mapping** all match exactly. The mapping is compared as a digest, so a single VLAN mapped differently splits the region in two.",
      "title": "Region membership"
+    },
+    {
+     "type": "topology",
+     "title": "MST load sharing across a distribution pair",
+     "nodes": [
+      {
+       "id": "ds1",
+       "kind": "l3switch",
+       "label": "DS1",
+       "x": 1,
+       "y": 0,
+       "sub": "root MST0-1 (4096)"
+      },
+      {
+       "id": "ds2",
+       "kind": "l3switch",
+       "label": "DS2",
+       "x": 5,
+       "y": 0,
+       "sub": "root MST2 (4096)"
+      },
+      {
+       "id": "as1",
+       "kind": "switch",
+       "label": "AS1",
+       "x": 3,
+       "y": 2,
+       "sub": "VLANs 10-30 and 40-60"
+      },
+      {
+       "id": "leg",
+       "kind": "switch",
+       "label": "Legacy switch",
+       "x": 6.5,
+       "y": 2,
+       "sub": "RSTP only"
+      }
+     ],
+     "links": [
+      {
+       "a": "ds1",
+       "b": "ds2",
+       "label": "Po1: forwards for all instances",
+       "style": "bold"
+      },
+      {
+       "a": "as1",
+       "b": "ds1",
+       "label": "MST1 fwd, MST2 blk"
+      },
+      {
+       "a": "as1",
+       "b": "ds2",
+       "label": "MST2 fwd, MST1 blk"
+      },
+      {
+       "a": "ds2",
+       "b": "leg",
+       "label": "boundary port",
+       "style": "dashed"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Region CAMPUS-A, revision 3",
+       "x": 0.5,
+       "y": 0,
+       "w": 5.5,
+       "h": 3,
+       "tone": "accent"
+      }
+     ],
+     "caption": "Each uplink forwards for one instance and stands by for the other, so both uplinks carry traffic. The legacy switch outside the region sees the whole region as one bridge through the IST at the boundary port."
     },
     {
      "type": "cli",
@@ -1819,31 +2801,79 @@ TRACK.modules.push({
      "title": "Protection features at a glance"
     },
     {
-     "type": "layers",
-     "items": [
+     "type": "topology",
+     "title": "Where each protection feature belongs",
+     "nodes": [
       {
-       "label": "Distribution (root)",
-       "parts": [
-        "Root guard on downlinks to access switches",
-        "Loop guard on inter-switch links where enabled"
-       ]
+       "id": "ds1",
+       "kind": "l3switch",
+       "label": "DS1",
+       "x": 1.5,
+       "y": 0,
+       "sub": "root, VLANs 10-30"
       },
       {
-       "label": "Access uplinks",
-       "parts": [
-        "Loop guard on root and alternate ports",
-        "No BPDU guard or filter"
-       ]
+       "id": "ds2",
+       "kind": "l3switch",
+       "label": "DS2",
+       "x": 4.5,
+       "y": 0,
+       "sub": "secondary root"
       },
       {
-       "label": "Access host ports",
-       "parts": [
-        "Edge + BPDU guard",
-        "Storm control for broadcast and multicast"
-       ]
+       "id": "as1",
+       "kind": "switch",
+       "label": "AS1",
+       "x": 3,
+       "y": 1.5,
+       "sub": "access switch"
+      },
+      {
+       "id": "pc",
+       "kind": "laptop",
+       "label": "Desk PC",
+       "x": 2,
+       "y": 3
+      },
+      {
+       "id": "rog",
+       "kind": "attacker",
+       "label": "Rogue switch",
+       "x": 4,
+       "y": 3,
+       "sub": "priority 0"
       }
      ],
-     "title": "Where each feature belongs"
+     "links": [
+      {
+       "a": "ds1",
+       "b": "ds2"
+      },
+      {
+       "a": "ds1",
+       "b": "as1",
+       "aEnd": "root guard",
+       "bEnd": "loop guard"
+      },
+      {
+       "a": "ds2",
+       "b": "as1",
+       "aEnd": "root guard",
+       "bEnd": "loop guard"
+      },
+      {
+       "a": "as1",
+       "b": "pc",
+       "label": "edge + BPDU guard"
+      },
+      {
+       "a": "as1",
+       "b": "rog",
+       "label": "err-disabled",
+       "style": "attack"
+      }
+     ],
+     "caption": "Distribution downlinks use root guard so no access-side device can become root; access uplinks use loop guard against unidirectional faults; host ports use edge with BPDU guard, which shuts the port the moment a rogue switch sends its first BPDU."
     },
     {
      "type": "cli",
@@ -2144,10 +3174,50 @@ TRACK.modules.push({
      "title": "Hashing and distribution"
     },
     {
+     "type": "chart",
+     "kind": "bar",
+     "title": "Share of traffic per member with eight hash buckets",
+     "labels": [
+      "Member 1",
+      "Member 2",
+      "Member 3",
+      "Member 4"
+     ],
+     "series": [
+      {
+       "name": "3-member bundle",
+       "values": [
+        37.5,
+        37.5,
+        25,
+        0
+       ]
+      },
+      {
+       "name": "4-member bundle",
+       "values": [
+        25,
+        25,
+        25,
+        25
+       ]
+      }
+     ],
+     "unit": "%",
+     "yLabel": "Share of buckets",
+     "caption": "Calculated, not measured: eight buckets split 3-3-2 across three members but 2-2-2-2 across four. Real shares also depend on how evenly the flows themselves hash."
+    },
+    {
      "type": "callout",
      "kind": "warning",
      "text": "Members must match in speed, duplex, switchport mode, allowed and native VLANs, and MTU. Mismatched members are suspended or left stand-alone. Configure the logical port-channel interface and let the members inherit, rather than editing members one by one.",
      "title": "Consistency is mandatory"
+    },
+    {
+     "type": "callout",
+     "kind": "pro",
+     "title": "EVPN multihoming instead of MC-LAG",
+     "text": "In EVPN-VXLAN fabrics a host or access switch can bundle links to two (or more) leaves using **EVPN multihoming**: the leaves share an Ethernet segment identifier (ESI) and coordinate through BGP EVPN routes instead of a vendor-specific peer link. To the attached device it is still one ordinary LACP bundle, but the solution is standards-based (RFC 7432) and needs no peer link between the leaves."
     },
     {
      "type": "text",
@@ -2178,6 +3248,103 @@ TRACK.modules.push({
       ]
      ],
      "title": "Private VLAN port types"
+    },
+    {
+     "type": "topology",
+     "title": "Private VLAN on a shared server segment (10.50.0.0/24)",
+     "nodes": [
+      {
+       "id": "gw",
+       "kind": "firewall",
+       "label": "Gateway / FW",
+       "x": 3,
+       "y": 0,
+       "sub": "10.50.0.1"
+      },
+      {
+       "id": "sw",
+       "kind": "switch",
+       "label": "SW3",
+       "x": 3,
+       "y": 1.5,
+       "sub": "primary VLAN 100"
+      },
+      {
+       "id": "a",
+       "kind": "server",
+       "label": "Server A",
+       "x": 0.5,
+       "y": 3,
+       "sub": "10.50.0.11"
+      },
+      {
+       "id": "b",
+       "kind": "server",
+       "label": "Server B",
+       "x": 2,
+       "y": 3,
+       "sub": "10.50.0.12"
+      },
+      {
+       "id": "c",
+       "kind": "server",
+       "label": "Server C",
+       "x": 4,
+       "y": 3,
+       "sub": "10.50.0.21"
+      },
+      {
+       "id": "d",
+       "kind": "server",
+       "label": "Server D",
+       "x": 5.5,
+       "y": 3,
+       "sub": "10.50.0.22"
+      }
+     ],
+     "links": [
+      {
+       "a": "sw",
+       "b": "gw",
+       "label": "promiscuous",
+       "aEnd": "Gi1/0/48"
+      },
+      {
+       "a": "sw",
+       "b": "a"
+      },
+      {
+       "a": "sw",
+       "b": "b"
+      },
+      {
+       "a": "sw",
+       "b": "c"
+      },
+      {
+       "a": "sw",
+       "b": "d"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Isolated VLAN 101",
+       "x": 0.5,
+       "y": 3,
+       "w": 2.5,
+       "h": 1,
+       "tone": "warn"
+      },
+      {
+       "label": "Community VLAN 102",
+       "x": 4,
+       "y": 3,
+       "w": 2.5,
+       "h": 1,
+       "tone": "good"
+      }
+     ],
+     "caption": "All four servers share one subnet and one gateway. A and B can reach only the promiscuous gateway port; C and D can also reach each other because they share a community."
     },
     {
      "type": "cli",
@@ -2226,6 +3393,17 @@ TRACK.modules.push({
        "feedback": "Correct. A single flow hashes to one member, so it is limited to that member's speed. More flows, or a faster single link, are needed for more throughput.",
        "best": true
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Use LACP active on at least one side; static bundles risk loops and black holes.",
+      "Fast rate detects a silent partner in about 3 s; min-links lets a degraded bundle step aside.",
+      "One flow always uses one member, and member counts of 2, 4 or 8 share buckets evenly.",
+      "Configure the port-channel, not individual members, so members never drift and get suspended.",
+      "Private VLANs isolate hosts at Layer 2 inside one subnet; block same-subnet routing at the gateway too."
      ]
     },
     {
@@ -2407,6 +3585,61 @@ TRACK.modules.push({
      "title": "Symptoms and likely causes"
     },
     {
+     "type": "tree",
+     "title": "Layer 2 triage by symptom",
+     "root": {
+      "label": "Users report loss of connectivity",
+      "children": [
+       {
+        "label": "Many VLANs, high CPU",
+        "text": "MAC flapping, TCs rising",
+        "children": [
+         {
+          "label": "Loop",
+          "text": "follow TC 'from' port, isolate it"
+         }
+        ]
+       },
+       {
+        "label": "One VLAN across a trunk",
+        "children": [
+         {
+          "label": "Allowed list or pruning",
+          "text": "show interfaces trunk"
+         },
+         {
+          "label": "VLAN missing",
+          "text": "show vlan brief"
+         }
+        ]
+       },
+       {
+        "label": "Untagged traffic in wrong VLAN",
+        "children": [
+         {
+          "label": "Native VLAN mismatch",
+          "text": "compare both ends"
+         }
+        ]
+       },
+       {
+        "label": "One port only",
+        "children": [
+         {
+          "label": "err-disabled",
+          "text": "BPDU guard, storm control"
+         },
+         {
+          "label": "CRC or input errors",
+          "text": "cable, optic, duplex"
+         }
+        ]
+       }
+      ]
+     },
+     "caption": "Start from the scope of the symptom: wide and noisy points to a loop, one VLAN points to trunks, one port points to the edge or the physical layer."
+    },
+    {
      "type": "cli",
      "device": "DS1 · IOS-style CLI",
      "lines": [
@@ -2576,6 +3809,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Work bottom-up and change one variable at a time, re-testing end to end after each change.",
+      "Follow the frame with MAC tables and LLDP until the MAC points at an access port.",
+      "MAC flapping plus rising topology changes means a loop: isolate the source port first, diagnose second.",
+      "Check allowed VLANs and native VLANs on both ends of every trunk in the path.",
+      "Prevent repeats with templates and automated compliance checks for edge-port protection."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -2733,6 +3977,112 @@ TRACK.modules.push({
       ]
      ],
      "title": "LSA types you must recognise"
+    },
+    {
+     "type": "topology",
+     "title": "Multi-area OSPF: who originates which LSA",
+     "nodes": [
+      {
+       "id": "r1",
+       "kind": "router",
+       "label": "R1",
+       "x": 3,
+       "y": 0,
+       "sub": "10.255.0.1, area 0"
+      },
+      {
+       "id": "r2",
+       "kind": "router",
+       "label": "R2 (ABR)",
+       "x": 1.5,
+       "y": 1.5,
+       "sub": "areas 0 and 10"
+      },
+      {
+       "id": "r3",
+       "kind": "router",
+       "label": "R3 (ABR)",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "areas 0 and 20"
+      },
+      {
+       "id": "r10",
+       "kind": "router",
+       "label": "R10",
+       "x": 1.5,
+       "y": 3,
+       "sub": "internal, area 10"
+      },
+      {
+       "id": "r30",
+       "kind": "router",
+       "label": "R30 (ASBR)",
+       "x": 4.5,
+       "y": 3,
+       "sub": "redistributes default"
+      },
+      {
+       "id": "isp",
+       "kind": "internet",
+       "label": "ISP",
+       "x": 6.5,
+       "y": 3,
+       "sub": "eBGP or static"
+      }
+     ],
+     "links": [
+      {
+       "a": "r1",
+       "b": "r2"
+      },
+      {
+       "a": "r1",
+       "b": "r3"
+      },
+      {
+       "a": "r2",
+       "b": "r3"
+      },
+      {
+       "a": "r2",
+       "b": "r10"
+      },
+      {
+       "a": "r3",
+       "b": "r30"
+      },
+      {
+       "a": "r30",
+       "b": "isp",
+       "label": "external"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Area 0 (backbone)",
+       "x": 1.5,
+       "y": 0,
+       "w": 4,
+       "h": 2,
+       "tone": "accent"
+      },
+      {
+       "label": "Area 10",
+       "x": 1,
+       "y": 2,
+       "w": 2,
+       "h": 2
+      },
+      {
+       "label": "Area 20",
+       "x": 4,
+       "y": 2,
+       "w": 2,
+       "h": 2
+      }
+     ],
+     "caption": "Every router originates a type 1 inside its own area. R2 and R3 sit on the area borders and generate type 3 summaries in both directions; R30 originates the type 5 default, and R3 adds a type 4 into area 0 (and R2 into area 10) so other routers can find R30."
     },
     {
      "type": "layers",
@@ -3031,6 +4381,56 @@ TRACK.modules.push({
      "title": "Every router must agree"
     },
     {
+     "type": "tree",
+     "title": "Choosing an OSPF area type",
+     "root": {
+      "label": "Does the area need every external route?",
+      "children": [
+       {
+        "label": "Yes",
+        "children": [
+         {
+          "label": "Normal area",
+          "text": "full type 3, 4 and 5 detail"
+         }
+        ]
+       },
+       {
+        "label": "No: do routers inside redistribute?",
+        "children": [
+         {
+          "label": "Yes: need inter-area detail?",
+          "children": [
+           {
+            "label": "NSSA",
+            "text": "yes: type 3 kept, local type 7"
+           },
+           {
+            "label": "Totally NSSA",
+            "text": "no: default plus local type 7"
+           }
+          ]
+         },
+         {
+          "label": "No: need inter-area detail?",
+          "children": [
+           {
+            "label": "Stub",
+            "text": "yes: type 3 kept, default"
+           },
+           {
+            "label": "Totally stubby",
+            "text": "no: default only"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "caption": "Two questions decide the area type: may routers inside inject external routes, and do they need per-prefix inter-area detail? The retail stores in the scenario below answer yes and no, which points to totally NSSA."
+    },
+    {
      "type": "cli",
      "device": "R2 (ABR) · IOS-style CLI",
      "lines": [
@@ -3048,6 +4448,104 @@ TRACK.modules.push({
       " summary-address 172.16.0.0 255.255.0.0"
      ],
      "title": "Configuring area types and summaries"
+    },
+    {
+     "type": "topology",
+     "title": "A totally NSSA retail area",
+     "nodes": [
+      {
+       "id": "r1",
+       "kind": "router",
+       "label": "R1",
+       "x": 3,
+       "y": 0,
+       "sub": "area 0, 9,000 type 5 routes"
+      },
+      {
+       "id": "a",
+       "kind": "router",
+       "label": "R40A (ABR)",
+       "x": 1.5,
+       "y": 1.5,
+       "sub": "type 7 to 5 translator"
+      },
+      {
+       "id": "b",
+       "kind": "router",
+       "label": "R40B (ABR)",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "originates default"
+      },
+      {
+       "id": "s1",
+       "kind": "router",
+       "label": "Store 001",
+       "x": 1,
+       "y": 3,
+       "sub": "ASBR: guest static"
+      },
+      {
+       "id": "s2",
+       "kind": "router",
+       "label": "Store 002",
+       "x": 3,
+       "y": 3,
+       "sub": "ASBR: guest static"
+      },
+      {
+       "id": "s3",
+       "kind": "router",
+       "label": "Store 120",
+       "x": 5,
+       "y": 3,
+       "sub": "ASBR: guest static"
+      }
+     ],
+     "links": [
+      {
+       "a": "r1",
+       "b": "a"
+      },
+      {
+       "a": "r1",
+       "b": "b"
+      },
+      {
+       "a": "a",
+       "b": "s1"
+      },
+      {
+       "a": "a",
+       "b": "s2"
+      },
+      {
+       "a": "b",
+       "b": "s2"
+      },
+      {
+       "a": "b",
+       "b": "s3"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Area 0",
+       "x": 1.5,
+       "y": 0,
+       "w": 4,
+       "h": 2,
+       "tone": "accent"
+      },
+      {
+       "label": "Area 40: totally NSSA",
+       "x": 0.5,
+       "y": 2,
+       "w": 5.5,
+       "h": 2
+      }
+     ],
+     "caption": "The ABRs stop type 3, 4 and 5 LSAs at the area border and send a default instead, so store routers hold only area 40 detail. Each store's guest route travels as type 7 and one ABR translates it into type 5 for the rest of the domain."
     },
     {
      "type": "compare",
@@ -3299,8 +4797,106 @@ TRACK.modules.push({
      "note": "The next hop is the neighbour's link-local address. Without an IPv4 address to borrow, the router ID must be configured explicitly."
     },
     {
+     "type": "callout",
+     "kind": "pro",
+     "title": "Design the IGP for IPv6 first",
+     "text": "Enterprises in 2026 typically run dual-stack routing, and many are moving client networks to **IPv6-only or IPv6-mostly**: clients that support it are told by the DHCPv4 'IPv6-only preferred' option (option 108, RFC 8925) to skip IPv4, and NAT64/DNS64 reaches the remaining IPv4-only destinations. Plan IPv6 addressing, summarisation and IGP areas together with IPv4 from day one rather than bolting IPv6 on later."
+    },
+    {
      "type": "text",
      "text": "**IS-IS** (ISO/IEC 10589, extended for IP by RFC 1195) is the other major link-state IGP. It is common in service-provider cores and large data-centre and campus fabrics. It was designed for a different network layer, so it runs **directly over Layer 2**, not over IP. That makes it independent of IP addressing and simple to extend: new features are added as **TLVs** (type-length-value fields), which is how IS-IS carries IPv6 (RFC 5308) and wide metrics (RFC 5305) in the same protocol instance."
+    },
+    {
+     "type": "topology",
+     "title": "IS-IS levels and areas",
+     "nodes": [
+      {
+       "id": "r5",
+       "kind": "router",
+       "label": "R5 (L2)",
+       "x": 3.5,
+       "y": 0,
+       "sub": "area 49.0003"
+      },
+      {
+       "id": "r2",
+       "kind": "router",
+       "label": "R2 (L1/L2)",
+       "x": 1.5,
+       "y": 1.5,
+       "sub": "area 49.0001"
+      },
+      {
+       "id": "r4",
+       "kind": "router",
+       "label": "R4 (L1/L2)",
+       "x": 5.5,
+       "y": 1.5,
+       "sub": "area 49.0002"
+      },
+      {
+       "id": "r1",
+       "kind": "router",
+       "label": "R1 (L1)",
+       "x": 1.5,
+       "y": 3,
+       "sub": "area 49.0001"
+      },
+      {
+       "id": "r6",
+       "kind": "router",
+       "label": "R6 (L1)",
+       "x": 5.5,
+       "y": 3,
+       "sub": "area 49.0002"
+      }
+     ],
+     "links": [
+      {
+       "a": "r2",
+       "b": "r5",
+       "label": "L2"
+      },
+      {
+       "a": "r4",
+       "b": "r5",
+       "label": "L2"
+      },
+      {
+       "a": "r2",
+       "b": "r1",
+       "label": "L1"
+      },
+      {
+       "a": "r4",
+       "b": "r6",
+       "label": "L1"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Area 49.0001",
+       "x": 1,
+       "y": 1.5,
+       "w": 2,
+       "h": 2
+      },
+      {
+       "label": "Area 49.0002",
+       "x": 5,
+       "y": 1.5,
+       "w": 2,
+       "h": 2
+      },
+      {
+       "label": "Area 49.0003",
+       "x": 3,
+       "y": 0,
+       "w": 2,
+       "h": 1
+      }
+     ],
+     "caption": "Each router sits wholly inside one area, so area borders fall on the links between R2, R5 and R4. The Level 2 chain R2–R5–R4 is the backbone; R1 and R6 know only their own area and follow a default route towards the attached L1/L2 router."
     },
     {
      "type": "layers",
@@ -3602,6 +5198,80 @@ TRACK.modules.push({
      "text": "**Redistribution** copies routes from one routing source into another. Each protocol needs a sensible **seed metric** for imported routes, and each router compares candidates first by **administrative distance**, a router-local trust value. Where two domains are redistributed into each other at **more than one point**, routes can leak back into their origin domain with a better administrative distance or metric, causing suboptimal paths or loops. Tags are the standard defence."
     },
     {
+     "type": "topology",
+     "title": "Mutual redistribution at two boundary routers",
+     "nodes": [
+      {
+       "id": "r1",
+       "kind": "router",
+       "label": "R1",
+       "x": 1,
+       "y": 1.5,
+       "sub": "OSPF internal"
+      },
+      {
+       "id": "r5",
+       "kind": "router",
+       "label": "R5",
+       "x": 3,
+       "y": 0.5,
+       "sub": "tags on export, denies on import"
+      },
+      {
+       "id": "r6",
+       "kind": "router",
+       "label": "R6",
+       "x": 3,
+       "y": 2.5,
+       "sub": "tags on export, denies on import"
+      },
+      {
+       "id": "r9",
+       "kind": "router",
+       "label": "R9",
+       "x": 5,
+       "y": 1.5,
+       "sub": "IS-IS L2 internal"
+      }
+     ],
+     "links": [
+      {
+       "a": "r1",
+       "b": "r5"
+      },
+      {
+       "a": "r1",
+       "b": "r6"
+      },
+      {
+       "a": "r5",
+       "b": "r9"
+      },
+      {
+       "a": "r6",
+       "b": "r9"
+      }
+     ],
+     "zones": [
+      {
+       "label": "OSPF domain",
+       "x": 0.5,
+       "y": 0.5,
+       "w": 2.5,
+       "h": 3
+      },
+      {
+       "label": "IS-IS domain",
+       "x": 3.5,
+       "y": 0.5,
+       "w": 2.5,
+       "h": 3,
+       "tone": "accent"
+      }
+     ],
+     "caption": "Without tags, a prefix from IS-IS enters OSPF at R5, crosses OSPF and is redistributed back into IS-IS at R6, where it can look better than the original. Tagging on the way out and denying the other domain's tag on the way in breaks that feedback loop."
+    },
+    {
      "type": "table",
      "head": [
       "Source",
@@ -3758,6 +5428,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Prefix lists match address and length; `ge` and `le` define the length range, and every list ends with an implicit deny.",
+      "In a route map, different match types are ANDed, values inside one match are ORed, and the first matching sequence wins.",
+      "Redistribution at more than one point needs tags and explicit prefix lists to stop routes feeding back.",
+      "Route policy changes the routing table; PBR overrides it for selected packets arriving on an interface.",
+      "Track PBR next hops and record every redistribution decision in a matrix."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -3835,34 +5516,81 @@ TRACK.modules.push({
      "text": "Most OSPF incidents fall into two families: **neighbours that will not reach Full**, and **neighbours that are Full but routes are missing or wrong**. The first is about hello and database-exchange parameters; the second about area design, LSA filtering, network types, summarisation and route preference. Identify the family first, then the specific cause."
     },
     {
-     "type": "flow",
-     "items": [
+     "type": "sequence",
+     "title": "OSPF neighbour states on a point-to-point link",
+     "actors": [
+      "R1 (10.255.0.1)",
+      "R2 (10.255.0.2)"
+     ],
+     "steps": [
       {
-       "label": "Down",
-       "text": "No hellos received"
+       "from": 0,
+       "to": 1,
+       "label": "Hello (seen: none)",
+       "note": "R2: Down to Init"
       },
       {
-       "label": "Init",
-       "text": "Hello received, our ID not yet listed"
+       "from": 1,
+       "to": 0,
+       "label": "Hello (seen: R1)",
+       "note": "R1: Init to 2-Way",
+       "reply": true
       },
       {
-       "label": "2-Way",
-       "text": "Bidirectional; DR/BDR election on multi-access"
+       "from": 0,
+       "to": 1,
+       "label": "Hello (seen: R2)",
+       "note": "R2: 2-Way"
       },
       {
-       "label": "ExStart / Exchange",
-       "text": "Master/slave chosen; database descriptions swapped"
+       "from": 0,
+       "to": 1,
+       "label": "Empty DBD (I, M, MS)",
+       "note": "ExStart: MTU checked here"
       },
       {
-       "label": "Loading",
-       "text": "Missing LSAs requested"
+       "from": 1,
+       "to": 0,
+       "label": "Empty DBD (I, M, MS)",
+       "note": "higher router ID R2 is master",
+       "reply": true
       },
       {
-       "label": "Full",
-       "text": "Databases synchronised"
+       "from": 0,
+       "to": 1,
+       "label": "DBDs: LSA headers",
+       "note": "Exchange"
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "DBDs: LSA headers",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "LSR for missing LSAs",
+       "note": "Loading"
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "LS Update with the LSAs",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "LS Acknowledgement"
+      },
+      {
+       "from": 0,
+       "to": 0,
+       "label": "Databases match: Full"
       }
      ],
-     "title": "OSPF neighbour states"
+     "caption": "Each stuck state points to its own causes: Init means hellos flow one way, ExStart or Exchange usually means MTU or duplicate router IDs. On broadcast segments a DR/BDR election happens after 2-Way, and only the DR and BDR go on to Full with everyone."
     },
     {
      "type": "table",
@@ -4108,6 +5836,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "First decide the family: neighbour not reaching Full, or Full with missing or wrong routes.",
+      "No neighbour: passive interface, ACL, subnet, area, timers, authentication or stub flag.",
+      "Init means one-way hellos; ExStart or Exchange means MTU mismatch or duplicate router ID.",
+      "Full but no route: network-type mismatch, area filtering, summaries, filters or a better route from elsewhere.",
+      "Fix the mismatch at its source rather than hiding it, for example with an MTU-ignore setting."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -4263,34 +6002,73 @@ TRACK.modules.push({
      "title": "Message types"
     },
     {
-     "type": "flow",
-     "items": [
+     "type": "sequence",
+     "title": "Establishing an eBGP session",
+     "actors": [
+      "E1 (AS 64505)",
+      "ISP-A (AS 64500)"
+     ],
+     "steps": [
       {
-       "label": "Idle",
-       "text": "Waiting to start; also the state after errors"
+       "from": 0,
+       "to": 1,
+       "label": "TCP SYN to port 179",
+       "note": "state: Connect"
       },
       {
-       "label": "Connect",
-       "text": "Trying to complete the TCP connection"
+       "from": 1,
+       "to": 0,
+       "label": "TCP SYN-ACK",
+       "reply": true
       },
       {
-       "label": "Active",
-       "text": "TCP attempt failed; retrying"
+       "from": 0,
+       "to": 1,
+       "label": "TCP ACK"
       },
       {
-       "label": "OpenSent",
-       "text": "OPEN sent, waiting for the peer's OPEN"
+       "from": 0,
+       "to": 1,
+       "label": "OPEN: AS 64505, hold 180",
+       "note": "state: OpenSent"
       },
       {
-       "label": "OpenConfirm",
-       "text": "OPENs accepted, waiting for KEEPALIVE"
+       "from": 1,
+       "to": 0,
+       "label": "OPEN: AS 64500, hold 180",
+       "note": "AS checked: OpenConfirm",
+       "reply": true
       },
       {
-       "label": "Established",
-       "text": "Exchanging UPDATEs"
+       "from": 0,
+       "to": 1,
+       "label": "KEEPALIVE"
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "KEEPALIVE",
+       "note": "state: Established",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "UPDATEs with attributes"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "UPDATE: 198.51.100.0/24"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "KEEPALIVE every 60 s",
+       "note": "no UPDATE or KEEPALIVE in 180 s: down"
       }
      ],
-     "title": "Neighbour state machine"
+     "caption": "If the TCP handshake fails the session cycles between Connect and Active; if the OPEN carries the wrong AS or an unacceptable capability, a NOTIFICATION closes it and it falls back to Idle. Both sides send their OPEN independently; the order shown is one common case."
     },
     {
      "type": "cli",
@@ -4613,6 +6391,93 @@ TRACK.modules.push({
      "title": "Who sees which attribute"
     },
     {
+     "type": "topology",
+     "title": "Where each attribute travels",
+     "nodes": [
+      {
+       "id": "ia",
+       "kind": "cloud",
+       "label": "ISP-A",
+       "x": 1.5,
+       "y": 0,
+       "sub": "AS 64500"
+      },
+      {
+       "id": "ib",
+       "kind": "cloud",
+       "label": "ISP-B",
+       "x": 4.5,
+       "y": 0,
+       "sub": "AS 64510"
+      },
+      {
+       "id": "e1",
+       "kind": "router",
+       "label": "E1",
+       "x": 1.5,
+       "y": 1.5,
+       "sub": "sets LOCAL_PREF 200"
+      },
+      {
+       "id": "e2",
+       "kind": "router",
+       "label": "E2",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "sets LOCAL_PREF 80"
+      },
+      {
+       "id": "core",
+       "kind": "l3switch",
+       "label": "CORE1",
+       "x": 3,
+       "y": 3,
+       "sub": "picks exit by LOCAL_PREF"
+      }
+     ],
+     "links": [
+      {
+       "a": "ia",
+       "b": "e1",
+       "label": "eBGP: AS_PATH, MED"
+      },
+      {
+       "a": "ib",
+       "b": "e2",
+       "label": "eBGP: AS_PATH, MED"
+      },
+      {
+       "a": "e1",
+       "b": "e2",
+       "label": "iBGP: LOCAL_PREF",
+       "style": "dashed"
+      },
+      {
+       "a": "e1",
+       "b": "core",
+       "label": "iBGP",
+       "style": "dashed"
+      },
+      {
+       "a": "e2",
+       "b": "core",
+       "label": "iBGP",
+       "style": "dashed"
+      }
+     ],
+     "zones": [
+      {
+       "label": "AS 64505",
+       "x": 1,
+       "y": 1.5,
+       "w": 4,
+       "h": 2,
+       "tone": "accent"
+      }
+     ],
+     "caption": "LOCAL_PREF is set at the edge and shared over iBGP, so every router inside AS 64505 makes the same exit choice, but it never crosses the eBGP links. AS_PATH and MED are what neighbouring ASes see when choosing how to reach you."
+    },
+    {
      "type": "cli",
      "device": "E1 · IOS-style CLI",
      "lines": [
@@ -4779,7 +6644,7 @@ TRACK.modules.push({
    "blocks": [
     {
      "type": "text",
-     "text": "Every BGP session needs explicit policy in **both directions**. Inbound policy protects you from bad routes: bogons, your own prefixes coming back, overly specific announcements and route leaks. Outbound policy protects everyone else from you: an enterprise should advertise **only its own prefixes**, never routes learned from one provider to another. Without it, a multihomed enterprise can accidentally become a transit path between two ISPs."
+     "text": "Every BGP session needs explicit policy in **both directions**. Inbound policy protects you from bad routes: bogons, your own prefixes coming back, overly specific announcements and route leaks. Outbound policy protects everyone else from you: an enterprise should advertise **only its own prefixes**, never routes learned from one provider to another. Without it, a multihomed enterprise can accidentally become a transit path between two ISPs. Many current implementations follow RFC 8212 and send or accept nothing on an eBGP session until a policy is configured; do not rely on that default, and never 'fix' it with a permit-all policy."
     },
     {
      "type": "table",
@@ -4823,6 +6688,53 @@ TRACK.modules.push({
      "title": "Edge policy baseline"
     },
     {
+     "type": "tree",
+     "title": "Inbound policy decision for a route from ISP-A",
+     "root": {
+      "label": "Route received from ISP-A",
+      "children": [
+       {
+        "label": "Own prefix or bogon?",
+        "children": [
+         {
+          "label": "Deny",
+          "text": "seq 5-20 of FROM-ISP"
+         }
+        ]
+       },
+       {
+        "label": "Longer than /24 (IPv6 /48)?",
+        "children": [
+         {
+          "label": "Deny",
+          "text": "over-specific or leak"
+         }
+        ]
+       },
+       {
+        "label": "RPKI state invalid?",
+        "children": [
+         {
+          "label": "Deny",
+          "text": "origin AS not authorised"
+         }
+        ]
+       },
+       {
+        "label": "Everything else",
+        "text": "valid or not-found",
+        "children": [
+         {
+          "label": "Permit",
+          "text": "set LOCAL_PREF, count to max-prefix"
+         }
+        ]
+       }
+      ]
+     },
+     "caption": "Inbound policy is evaluated in order and the first match decides. Routes that pass every deny test are accepted and marked; RPKI 'not-found' routes are still accepted because many prefixes have no ROA yet."
+    },
+    {
      "type": "cli",
      "device": "E1 · IOS-style CLI",
      "lines": [
@@ -4853,6 +6765,34 @@ TRACK.modules.push({
      "kind": "warning",
      "text": "`^$` matches an empty AS_PATH, which means routes originated inside your own AS. `_64500$` matches paths originated by AS 64500. Test every expression with show commands before applying it, because a wrong expression can withdraw all your prefixes or leak everything.",
      "title": "Regular expressions are exact"
+    },
+    {
+     "type": "cli",
+     "title": "Route origin validation at the edge",
+     "device": "E1 · IOS-style CLI",
+     "lines": [
+      "router bgp 64505",
+      " bgp rpki server tcp 10.255.0.50 port 3323 refresh 600",
+      "!",
+      "route-map FROM-ISP-A deny 5",
+      " match rpki invalid",
+      "route-map FROM-ISP-A permit 10",
+      " set local-preference 200",
+      "!",
+      "router bgp 64505",
+      " address-family ipv4 unicast",
+      "  neighbor 203.0.113.1 route-map FROM-ISP-A in",
+      "!",
+      "E1# show ip bgp rpki table | include 198.51.100.0",
+      "198.51.100.0/24      24      64505      0      10.255.0.50/3323"
+     ],
+     "note": "The router fetches validated ROA data from an internal RPKI validator over the RTR protocol (RFC 8210) and marks each route valid, invalid or not-found. Run two validators, publish ROAs for your own prefixes at your regional registry, and drop invalids explicitly because default behaviour differs between platforms."
+    },
+    {
+     "type": "callout",
+     "kind": "insight",
+     "title": "Beyond origin validation",
+     "text": "ROV proves that an AS may **originate** a prefix, not that the path is legitimate, so it does not stop route leaks. Two complements are maturing: BGP roles with the Only-to-Customer attribute (RFC 9234), which mark sessions as provider, customer or peer and catch leaks automatically, and path validation based on AS provider authorisation records (ASPA), whose standardisation and vendor support are still progressing, so check the current status before you plan on it."
     },
     {
      "type": "table",
@@ -5124,31 +7064,107 @@ TRACK.modules.push({
      "note": "10.255.0.102 is the second reflector (RR2), peered as a non-client. Clients E1 and E2 peer with both reflectors and need no special configuration."
     },
     {
-     "type": "layers",
-     "items": [
+     "type": "topology",
+     "title": "Redundant route-reflector design",
+     "nodes": [
       {
-       "label": "Reflectors",
-       "parts": [
-        "RR1 and RR2, often out of the forwarding path",
-        "Peer with each other as non-clients"
-       ]
+       "id": "rr1",
+       "kind": "router",
+       "label": "RR1",
+       "x": 2,
+       "y": 0,
+       "sub": "cluster 10.255.0.101"
       },
       {
-       "label": "Clients",
-       "parts": [
-        "Edge routers, WAN hubs, data-centre borders",
-        "Each peers with both reflectors"
-       ]
+       "id": "rr2",
+       "kind": "router",
+       "label": "RR2",
+       "x": 5,
+       "y": 0,
+       "sub": "cluster 10.255.0.102"
       },
       {
-       "label": "IGP",
-       "parts": [
-        "Carries all loopbacks and next hops",
-        "Must converge before BGP can use paths"
-       ]
+       "id": "e1",
+       "kind": "router",
+       "label": "E1",
+       "x": 0.5,
+       "y": 2,
+       "sub": "internet edge"
+      },
+      {
+       "id": "e2",
+       "kind": "router",
+       "label": "E2",
+       "x": 2.5,
+       "y": 2,
+       "sub": "internet edge"
+      },
+      {
+       "id": "wan",
+       "kind": "router",
+       "label": "WAN hub",
+       "x": 4.5,
+       "y": 2,
+       "sub": "SD-WAN head-end"
+      },
+      {
+       "id": "dc",
+       "kind": "l3switch",
+       "label": "DC border",
+       "x": 6.5,
+       "y": 2,
+       "sub": "border leaf"
       }
      ],
-     "title": "Redundant reflector design"
+     "links": [
+      {
+       "a": "rr1",
+       "b": "rr2",
+       "label": "non-client",
+       "style": "bold"
+      },
+      {
+       "a": "rr1",
+       "b": "e1",
+       "style": "dashed"
+      },
+      {
+       "a": "rr1",
+       "b": "e2",
+       "style": "dashed"
+      },
+      {
+       "a": "rr1",
+       "b": "wan",
+       "style": "dashed"
+      },
+      {
+       "a": "rr1",
+       "b": "dc",
+       "style": "dashed"
+      },
+      {
+       "a": "rr2",
+       "b": "e1",
+       "style": "dashed"
+      },
+      {
+       "a": "rr2",
+       "b": "e2",
+       "style": "dashed"
+      },
+      {
+       "a": "rr2",
+       "b": "wan",
+       "style": "dashed"
+      },
+      {
+       "a": "rr2",
+       "b": "dc",
+       "style": "dashed"
+      }
+     ],
+     "caption": "Every client has one iBGP session to each reflector, so losing a reflector removes no routes; the reflectors peer with each other as non-clients. Six routers need 9 sessions instead of the 15 a full mesh would need, and the gap grows quickly with every added router."
     },
     {
      "type": "callout",
@@ -5203,6 +7219,17 @@ TRACK.modules.push({
        "feedback": "Correct. Clients only see one path — the reflector's choice — so they lose the closer exit. Placement or add-path addresses this.",
        "best": true
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "A full mesh needs n × (n − 1) ÷ 2 sessions; two reflectors need about 2 × (n − 2) + 1.",
+      "Reflectors pass client routes to everyone, and non-client routes to clients only.",
+      "ORIGINATOR_ID and CLUSTER_LIST stop reflected routes looping.",
+      "Clients see only the reflector's best path: place reflectors centrally or use add-path.",
+      "Deploy reflectors in pairs and keep next hops reachable through the IGP."
      ]
     },
     {
@@ -5339,31 +7366,104 @@ TRACK.modules.push({
      "title": "Inbound techniques compared"
     },
     {
-     "type": "layers",
-     "items": [
+     "type": "topology",
+     "title": "Dual-ISP reference design",
+     "nodes": [
       {
-       "label": "Providers",
-       "parts": [
-        "ISP-A (AS 64500): primary",
-        "ISP-B (AS 64510): backup"
-       ]
+       "id": "net",
+       "kind": "internet",
+       "label": "Internet",
+       "x": 3,
+       "y": 0
       },
       {
-       "label": "Edge",
-       "parts": [
-        "E1 peers with ISP-A, E2 with ISP-B",
-        "iBGP between E1 and E2 over loopbacks, next-hop-self"
-       ]
+       "id": "ia",
+       "kind": "cloud",
+       "label": "ISP-A",
+       "x": 1.5,
+       "y": 1,
+       "sub": "AS 64500, primary"
       },
       {
-       "label": "Inside",
-       "parts": [
-        "Firewalls and core learn a default from both edges",
-        "Prefix 198.51.100.0/24 advertised from both edges"
-       ]
+       "id": "ib",
+       "kind": "cloud",
+       "label": "ISP-B",
+       "x": 4.5,
+       "y": 1,
+       "sub": "AS 64510, backup"
+      },
+      {
+       "id": "e1",
+       "kind": "router",
+       "label": "E1",
+       "x": 1.5,
+       "y": 2.5,
+       "sub": "LOCAL_PREF 200 in"
+      },
+      {
+       "id": "e2",
+       "kind": "router",
+       "label": "E2",
+       "x": 4.5,
+       "y": 2.5,
+       "sub": "LOCAL_PREF 80 in, prepend ×3 out"
+      },
+      {
+       "id": "fw",
+       "kind": "firewall",
+       "label": "Firewall pair",
+       "x": 3,
+       "y": 4,
+       "sub": "default from both edges"
       }
      ],
-     "title": "Dual-ISP reference design"
+     "links": [
+      {
+       "a": "net",
+       "b": "ia"
+      },
+      {
+       "a": "net",
+       "b": "ib"
+      },
+      {
+       "a": "ia",
+       "b": "e1",
+       "label": "eBGP",
+       "bEnd": "203.0.113.1"
+      },
+      {
+       "a": "ib",
+       "b": "e2",
+       "label": "eBGP",
+       "bEnd": "192.0.2.9"
+      },
+      {
+       "a": "e1",
+       "b": "e2",
+       "label": "iBGP, next-hop-self",
+       "style": "dashed"
+      },
+      {
+       "a": "e1",
+       "b": "fw"
+      },
+      {
+       "a": "e2",
+       "b": "fw"
+      }
+     ],
+     "zones": [
+      {
+       "label": "AS 64505: 198.51.100.0/24 announced to both ISPs",
+       "x": 1,
+       "y": 2.5,
+       "w": 4,
+       "h": 2,
+       "tone": "accent"
+      }
+     ],
+     "caption": "Outbound, LOCAL_PREF makes every internal router leave through E1 while ISP-A is up. Inbound, the prefix is announced to both providers but the prepended path through ISP-B looks longer, so the world prefers ISP-A until it fails."
     },
     {
      "type": "cli",
@@ -5595,6 +7695,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Outbound traffic is yours to control with LOCAL_PREF; inbound can only be influenced.",
+      "Influence inbound with prepending, provider communities or more-specifics; MED only between links to one provider.",
+      "Announce your prefix to both ISPs, or the backup link is useless when the primary fails.",
+      "Troubleshoot a route in order: received, accepted, best, installed, advertised onwards.",
+      "Apply policy changes with soft resets and verify advertised routes from outside your network."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -5713,7 +7824,7 @@ TRACK.exam.push([
   "options": [
    "Access switches cannot reliably forward firewall traffic at 10 Gbit/s rates",
    "Firewalls must always be connected to the spine layer",
-   "Internet traffic must not use any IPv4 addresses inside",
+   "The free ports should be kept for future users on that floor",
    "Edge functions belong in their own module off the core or an edge block"
   ],
   "answer": 3,

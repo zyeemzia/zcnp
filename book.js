@@ -40,6 +40,7 @@
   const T = b => b.title ? `<h3 class="b-title">${md(b.title)}</h3>` : '';
   const KIND = { insight: 'Insight', warning: 'Watch out', example: 'Example', pro: 'Pro tip', definition: 'Definition' };
   function block(b, ctx) {
+    if (ZZ.FIG && ZZ.FIG[b.type]) return `<div class="blk">${ZZ.figure(b, T(b))}</div>`;
     switch (b.type) {
       case 'text': return `<p class="b">${md(b.text)}</p>`;
       case 'callout': return `<aside class="callout ${esc(b.kind)}"><span class="ct">${KIND[b.kind] || ''}${b.title ? ' · ' + md(b.title) : ''}</span>${md(b.text)}</aside>`;

@@ -36,43 +36,106 @@ TRACK.modules.push({
      "title": "Virtual Routing and Forwarding (VRF)"
     },
     {
-     "type": "layers",
+     "type": "topology",
      "title": "Where VRFs sit in an enterprise design",
-     "items": [
+     "nodes": [
       {
+       "id": "ss",
+       "kind": "server",
        "label": "Shared services",
-       "parts": [
-        "DNS and DHCP",
-        "Identity and NAC servers",
-        "Internet edge firewall"
-       ]
+       "x": 1,
+       "y": 0,
+       "sub": "DNS, DHCP, NAC"
       },
       {
-       "label": "Leaking and policy point",
-       "parts": [
-        "Fusion firewall or router",
-        "Selective import/export of routes",
-        "Inter-VRF security policy"
-       ]
+       "id": "fw",
+       "kind": "firewall",
+       "label": "Fusion firewall",
+       "x": 3,
+       "y": 0,
+       "sub": "inter-VRF policy"
       },
       {
-       "label": "VRF instances",
-       "parts": [
-        "CORP",
-        "GUEST",
-        "IOT",
-        "MGMT"
-       ]
+       "id": "net",
+       "kind": "internet",
+       "label": "Internet",
+       "x": 5,
+       "y": 0
       },
       {
-       "label": "Physical underlay",
-       "parts": [
-        "Routed uplinks and subinterfaces",
-        "SVIs per VLAN",
-        "Single IGP or per-VRF routing"
-       ]
+       "id": "core",
+       "kind": "l3switch",
+       "label": "Core",
+       "x": 3,
+       "y": 1.5,
+       "sub": "VRFs CORP, GUEST, IOT"
+      },
+      {
+       "id": "ds",
+       "kind": "l3switch",
+       "label": "Distribution",
+       "x": 3,
+       "y": 3,
+       "sub": "SVIs per VRF"
+      },
+      {
+       "id": "pc",
+       "kind": "laptop",
+       "label": "Staff laptop",
+       "x": 1.5,
+       "y": 4.5,
+       "sub": "VLAN 10, CORP"
+      },
+      {
+       "id": "ph",
+       "kind": "phone",
+       "label": "Guest phone",
+       "x": 3,
+       "y": 4.5,
+       "sub": "VLAN 20, GUEST"
+      },
+      {
+       "id": "cam",
+       "kind": "sensor",
+       "label": "IoT sensor",
+       "x": 4.5,
+       "y": 4.5,
+       "sub": "VLAN 30, IOT"
       }
-     ]
+     ],
+     "links": [
+      {
+       "a": "fw",
+       "b": "ss"
+      },
+      {
+       "a": "fw",
+       "b": "net"
+      },
+      {
+       "a": "core",
+       "b": "fw",
+       "label": "one subinterface per VRF"
+      },
+      {
+       "a": "ds",
+       "b": "core",
+       "label": "VRF-lite: .10 .20 .30"
+      },
+      {
+       "a": "ds",
+       "b": "pc"
+      },
+      {
+       "a": "ds",
+       "b": "ph"
+      },
+      {
+       "a": "ds",
+       "b": "cam"
+      }
+     ],
+     "caption": "Each VRF is carried hop by hop on its own subinterface, so CORP, GUEST and IOT never share a routing table. The only place traffic can cross between VRFs, or reach shared services and the internet, is the fusion firewall, where the policy and the logs live."
     },
     {
      "type": "compare",
@@ -273,6 +336,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "A VRF is a separate routing table and FIB; identical prefixes can coexist in different VRFs.",
+      "VRF-lite needs a logical interface per VRF on every hop; MP-BGP VPNs keep VRF state only at the edges.",
+      "The RD makes routes unique; the RT decides import and export; the VRF name is local.",
+      "Leak to shared services in both directions at one documented policy point, ideally a fusion firewall.",
+      "Bind the interface to the VRF before adding its address, and use VRF-aware show and ping commands."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -350,32 +424,84 @@ TRACK.modules.push({
      "text": "**Generic Routing Encapsulation (GRE)** wraps one packet inside another so that it can cross a network that would not otherwise carry it. It is protocol-agnostic, supports multicast, and therefore lets you run an IGP between two sites over the internet or a provider core. GRE adds no confidentiality or integrity by itself; in production it is almost always protected by IPsec, which the next lesson covers."
     },
     {
-     "type": "layers",
+     "type": "packet",
      "title": "GRE over IPv4: what is on the wire",
-     "items": [
+     "fields": [
       {
-       "label": "Delivery IPv4 header (20 bytes)",
-       "parts": [
-        "Source = local tunnel source",
-        "Destination = remote tunnel endpoint",
-        "IP protocol 47"
-       ]
+       "label": "Version",
+       "bits": 4
       },
       {
-       "label": "GRE header (4 bytes)",
-       "parts": [
-        "Protocol type of the payload",
-        "Optional key and sequence fields add 4 bytes each"
-       ]
+       "label": "IHL",
+       "bits": 4
       },
       {
-       "label": "Passenger packet",
-       "parts": [
-        "Original IP header",
-        "Routing protocol hellos, multicast or user data"
-       ]
+       "label": "DSCP",
+       "bits": 6
+      },
+      {
+       "label": "ECN",
+       "bits": 2
+      },
+      {
+       "label": "Total length",
+       "bits": 16
+      },
+      {
+       "label": "Identification",
+       "bits": 16
+      },
+      {
+       "label": "Flags",
+       "bits": 3
+      },
+      {
+       "label": "Fragment offset",
+       "bits": 13
+      },
+      {
+       "label": "TTL",
+       "bits": 8
+      },
+      {
+       "label": "Protocol = 47",
+       "bits": 8
+      },
+      {
+       "label": "Header checksum",
+       "bits": 16
+      },
+      {
+       "label": "Source = local tunnel source",
+       "bits": 32
+      },
+      {
+       "label": "Destination = remote tunnel endpoint",
+       "bits": 32
+      },
+      {
+       "label": "C",
+       "bits": 1
+      },
+      {
+       "label": "Reserved0",
+       "bits": 12
+      },
+      {
+       "label": "Ver",
+       "bits": 3
+      },
+      {
+       "label": "Protocol type (0x0800 = IPv4)",
+       "bits": 16
+      },
+      {
+       "label": "Passenger packet: original IP header and payload",
+       "bits": 32,
+       "variable": true
       }
-     ]
+     ],
+     "caption": "Twenty bytes of delivery IPv4 header plus a 4-byte base GRE header make the 24 bytes of overhead. Setting the key or sequence-number options adds 4 bytes each, which is why the MTU arithmetic below must match the options you actually use."
     },
     {
      "type": "cli",
@@ -424,30 +550,32 @@ TRACK.modules.push({
      "title": "Recursive routing"
     },
     {
-     "type": "flow",
+     "type": "cycle",
      "title": "How the flap cycle forms",
+     "center": "Repeats every keepalive cycle",
      "items": [
       {
        "label": "Tunnel up",
-       "text": "Transport route to 198.51.100.7 uses the physical WAN."
+       "text": "the route to 198.51.100.7 uses the physical WAN"
       },
       {
-       "label": "IGP adjacency forms",
-       "text": "OSPF runs over Tunnel0 and exchanges all prefixes."
+       "label": "Adjacency forms",
+       "text": "OSPF runs over Tunnel0 and exchanges all prefixes"
       },
       {
        "label": "Better route learned",
-       "text": "The remote site advertises a route covering 198.51.100.7 through the tunnel."
+       "text": "the far side advertises a route covering 198.51.100.7 through the tunnel"
       },
       {
        "label": "Recursion detected",
-       "text": "The route to the tunnel destination now points into the tunnel; the router brings Tunnel0 down."
+       "text": "the destination now resolves into the tunnel, so the router disables Tunnel0"
       },
       {
        "label": "Routes withdrawn",
-       "text": "Adjacency drops, the physical route returns, and the tunnel comes up again."
+       "text": "the adjacency drops, the physical route returns and the cycle starts again"
       }
-     ]
+     ],
+     "caption": "Nothing in the loop is broken hardware: the overlay is learning a route to its own transport. Breaking any link of the cycle durably means keeping transport prefixes out of the overlay."
     },
     {
      "type": "cli",
@@ -559,6 +687,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "GRE carries any protocol, including multicast, but adds no security on its own.",
+      "Plain GRE costs 24 bytes: IP MTU 1476 on a 1500-byte path; use 1400 and MSS 1360 if IPsec will be added.",
+      "A tunnel that flaps on a regular rhythm usually has recursive routing.",
+      "Fix recursion by separating transport and overlay routing, ideally with a front-door VRF.",
+      "Large transfers that stall while small pings pass point to MTU and filtered ICMP."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -667,26 +806,65 @@ TRACK.modules.push({
      ]
     },
     {
-     "type": "flow",
+     "type": "sequence",
      "title": "IKEv2 in four exchanges",
-     "items": [
+     "actors": [
+      "HQ-R1 (initiator)",
+      "BR7 (responder)"
+     ],
+     "steps": [
       {
-       "label": "IKE_SA_INIT",
-       "text": "Agree algorithms, exchange DH values and nonces, detect NAT."
+       "from": 0,
+       "to": 1,
+       "label": "IKE_SA_INIT request",
+       "note": "SAi1, KEi, Ni on UDP 500"
       },
       {
-       "label": "IKE_AUTH",
-       "text": "Prove identities with PSK or certificates; create the first child SA."
+       "from": 1,
+       "to": 0,
+       "label": "IKE_SA_INIT response",
+       "note": "SAr1, KEr, Nr, NAT detection",
+       "reply": true
       },
       {
-       "label": "CREATE_CHILD_SA",
-       "text": "Add more child SAs or rekey existing ones, optionally with PFS."
+       "from": 0,
+       "to": 1,
+       "label": "IKE_AUTH request",
+       "note": "encrypted: IDi, AUTH, SAi2, TSi, TSr"
       },
       {
-       "label": "INFORMATIONAL",
-       "text": "Liveness checks (dead peer detection), deletes and error notifications."
+       "from": 1,
+       "to": 0,
+       "label": "IKE_AUTH response",
+       "note": "IDr, AUTH, SAr2: first child SA up",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "CREATE_CHILD_SA request",
+       "note": "rekey, new KE for PFS"
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "CREATE_CHILD_SA response",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "INFORMATIONAL request",
+       "note": "liveness (dead peer detection)"
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "INFORMATIONAL response",
+       "reply": true
       }
-     ]
+     ],
+     "caption": "Only two round trips are needed before user traffic is protected. A 'no proposal chosen' failure happens in message 2, while a wrong key or certificate fails in message 4, so the failing exchange tells you where to look."
     },
     {
      "type": "compare",
@@ -738,6 +916,12 @@ TRACK.modules.push({
      ],
      "title": "IKEv2 and IPsec profile",
      "note": "AES-GCM is an AEAD cipher, so the proposal needs a PRF but no separate integrity algorithm. Group 20 is 384-bit ECP."
+    },
+    {
+     "type": "callout",
+     "kind": "pro",
+     "title": "Plan for post-quantum key exchange",
+     "text": "Traffic recorded today could be decrypted later by a large quantum computer, so long-lived confidential data deserves attention now. IKEv2 can combine several key exchanges in one negotiation (RFC 9370), letting a post-quantum algorithm such as ML-KEM (FIPS 203) run alongside classical ECDH. Platform support is still arriving: inventory your tunnels, prefer AES-256 and strong groups today, and check vendor roadmaps before committing dates."
     },
     {
      "type": "cli",
@@ -800,34 +984,68 @@ TRACK.modules.push({
      "text": "A **dynamic multipoint VPN** scales the same idea to hundreds of sites. Every spoke has one multipoint GRE (mGRE) tunnel interface protected by IPsec. Spokes register their public (NBMA) address with the hub using the **Next Hop Resolution Protocol (NHRP)**. Traffic between spokes can start through the hub, and NHRP then lets the spokes discover each other's public addresses and build a direct tunnel on demand."
     },
     {
-     "type": "flow",
+     "type": "sequence",
      "title": "On-demand spoke-to-spoke tunnel",
-     "items": [
+     "actors": [
+      "Spoke A",
+      "Hub",
+      "Spoke B"
+     ],
+     "steps": [
       {
-       "label": "Register",
-       "text": "Spoke sends an NHRP registration mapping its tunnel IP to its public address."
+       "from": 0,
+       "to": 1,
+       "label": "NHRP registration",
+       "note": "tunnel IP to NBMA address"
       },
       {
-       "label": "First packets via hub",
-       "text": "Spoke A sends traffic for Spoke B's subnet to the hub."
+       "from": 2,
+       "to": 1,
+       "label": "NHRP registration"
       },
       {
-       "label": "Redirect",
-       "text": "The hub forwards it and tells Spoke A a better path exists."
+       "from": 0,
+       "to": 1,
+       "label": "Data for B's subnet",
+       "note": "follows the hub's summary route"
       },
       {
-       "label": "Resolve",
-       "text": "Spoke A asks for Spoke B's public address via NHRP."
+       "from": 1,
+       "to": 2,
+       "label": "Data forwarded to B"
       },
       {
-       "label": "Direct tunnel",
-       "text": "IKEv2 and IPsec build a spoke-to-spoke SA; a shortcut route is installed."
+       "from": 1,
+       "to": 0,
+       "label": "NHRP redirect",
+       "reply": true,
+       "note": "a better path exists"
       },
       {
-       "label": "Age out",
-       "text": "Idle shortcuts and SAs time out, keeping state proportional to real traffic."
+       "from": 0,
+       "to": 1,
+       "label": "Resolution request for B"
+      },
+      {
+       "from": 1,
+       "to": 2,
+       "label": "Request forwarded to B"
+      },
+      {
+       "from": 2,
+       "to": 0,
+       "label": "Resolution reply with B's NBMA address",
+       "note": "after B builds its side",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 2,
+       "label": "IKEv2 and IPsec SA, then direct data",
+       "note": "shortcut route installed"
       }
-     ]
+     ],
+     "caption": "The first packets always take the hub path, so users see no delay; the direct tunnel is built in the background and ages out when idle. Without redirect on the hub and shortcut on the spokes, traffic stays on the hub path forever."
     },
     {
      "type": "cli",
@@ -903,6 +1121,17 @@ TRACK.modules.push({
        "term": "NHRP",
        "def": "Next Hop Resolution Protocol: maps tunnel addresses to public (NBMA) addresses so multipoint tunnels can find peers dynamically."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Build IPsec route-based with VTIs so routing, counters and QoS work normally.",
+      "IKE_SA_INIT agrees algorithms and DH; IKE_AUTH proves identity and creates the first child SA.",
+      "Encaps rising with zero decaps means the far side is not sending protected traffic back.",
+      "Hub-and-spoke VPNs use NHRP registration, redirect and shortcut to build spoke-to-spoke tunnels on demand.",
+      "Use AEAD ciphers, strong DH groups and managed keys, and start planning post-quantum key exchange."
      ]
     },
     {
@@ -983,44 +1212,48 @@ TRACK.modules.push({
      "text": "Module 1 built a routed spine-leaf fabric. Applications still sometimes need the same Layer 2 segment on many racks, and tenants need isolation beyond 4,094 VLANs. **VXLAN** (RFC 7348) solves the data-plane part by tunnelling Ethernet frames in UDP between **VTEPs** on the leaves. **BGP EVPN** solves the control-plane part: instead of flooding to learn where hosts live, leaves advertise MAC and IP reachability to each other through BGP."
     },
     {
-     "type": "layers",
-     "title": "VXLAN encapsulation (outermost first)",
-     "items": [
+     "type": "packet",
+     "title": "VXLAN encapsulation: outer UDP and VXLAN headers",
+     "fields": [
       {
-       "label": "Outer Ethernet (14 bytes)",
-       "parts": [
-        "Next-hop MAC in the underlay"
-       ]
+       "label": "UDP source port (hash of inner flow)",
+       "bits": 16
       },
       {
-       "label": "Outer IP (20 bytes)",
-       "parts": [
-        "Source = local VTEP loopback",
-        "Destination = remote VTEP or multicast group"
-       ]
+       "label": "UDP destination port = 4789",
+       "bits": 16
       },
       {
-       "label": "Outer UDP (8 bytes)",
-       "parts": [
-        "Destination port 4789",
-        "Source port derived from a hash of the inner flow, giving ECMP entropy"
-       ]
+       "label": "UDP length",
+       "bits": 16
       },
       {
-       "label": "VXLAN header (8 bytes)",
-       "parts": [
-        "24-bit VXLAN Network Identifier (VNI)",
-        "Flags"
-       ]
+       "label": "UDP checksum (usually 0)",
+       "bits": 16
       },
       {
-       "label": "Original Ethernet frame",
-       "parts": [
-        "Inner MACs, optional inner VLAN tag removed or mapped",
-        "Tenant payload"
-       ]
+       "label": "Flags (I bit = 1)",
+       "bits": 8
+      },
+      {
+       "label": "Reserved",
+       "bits": 24
+      },
+      {
+       "label": "VXLAN Network Identifier (VNI)",
+       "bits": 24
+      },
+      {
+       "label": "Reserved",
+       "bits": 8
+      },
+      {
+       "label": "Original Ethernet frame: inner MACs, payload",
+       "bits": 32,
+       "variable": true
       }
-     ]
+     ],
+     "caption": "These 16 bytes follow a 14-byte outer Ethernet header and a 20-byte outer IPv4 header whose source is the local VTEP loopback and whose destination is the remote VTEP (or a multicast group). Together that is the 50 bytes of overhead; the 24-bit VNI gives over 16 million segments."
     },
     {
      "type": "formula",
@@ -1110,30 +1343,51 @@ TRACK.modules.push({
      "title": "EVPN route types you will meet"
     },
     {
-     "type": "flow",
+     "type": "sequence",
      "title": "How a host becomes reachable fabric-wide",
-     "items": [
+     "actors": [
+      "Server A",
+      "Leaf-3",
+      "Spine (RR)",
+      "Leaf-5"
+     ],
+     "steps": [
       {
-       "label": "Attach",
-       "text": "A server sends traffic; leaf L3 learns its MAC and IP on VLAN 10."
+       "from": 0,
+       "to": 1,
+       "label": "First frame or ARP",
+       "note": "MAC and IP on VLAN 10"
       },
       {
-       "label": "Advertise",
-       "text": "L3 sends a Type 2 route with VNI 10010, its VTEP address and route targets."
+       "from": 1,
+       "to": 1,
+       "label": "Learn locally, map to VNI 10010"
       },
       {
-       "label": "Reflect",
-       "text": "Spines act as BGP route reflectors and pass the route to every leaf."
+       "from": 1,
+       "to": 2,
+       "label": "EVPN Type 2 route",
+       "note": "MAC, IP, VNI 10010, RT; next hop Leaf-3"
       },
       {
-       "label": "Import",
-       "text": "Leaves with a matching RT install the MAC/IP pointing to L3's VTEP."
+       "from": 2,
+       "to": 3,
+       "label": "Type 2 route reflected"
       },
       {
-       "label": "Forward",
-       "text": "Traffic is VXLAN-encapsulated directly to L3; ARP is answered locally."
+       "from": 3,
+       "to": 3,
+       "label": "RT matches import: install",
+       "note": "ARP now answered locally"
+      },
+      {
+       "from": 3,
+       "to": 1,
+       "label": "VXLAN traffic to Leaf-3 VTEP",
+       "note": "unicast, no flooding"
       }
-     ]
+     ],
+     "caption": "Reachability is learned through BGP before any data needs to flow, so remote leaves never flood to find Server A. If the route arrives but is not installed, the route-target import policy is the first suspect."
     },
     {
      "type": "text",
@@ -1230,6 +1484,17 @@ TRACK.modules.push({
        "term": "Distributed anycast gateway",
        "def": "The same default-gateway IP and MAC configured on every leaf so hosts route at their first hop wherever they attach."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "VXLAN tunnels Ethernet in UDP port 4789 between VTEPs and adds 50 bytes, so the underlay needs jumbo MTU.",
+      "BGP EVPN advertises MAC/IP (Type 2), VTEP interest (Type 3) and tenant prefixes (Type 5).",
+      "Route targets decide which leaves import which routes; received but not installed means check RTs.",
+      "A distributed anycast gateway and symmetric IRB let every leaf route at the first hop.",
+      "Prove the fabric with full-size do-not-fragment pings between VTEPs before go-live."
      ]
     },
     {
@@ -1347,6 +1612,125 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "topology",
+     "title": "SD-WAN with dual hubs and cloud security",
+     "nodes": [
+      {
+       "id": "orc",
+       "kind": "controller",
+       "label": "Orchestrator",
+       "x": 0.5,
+       "y": 0,
+       "sub": "onboarding, templates"
+      },
+      {
+       "id": "ctl",
+       "kind": "controller",
+       "label": "Controllers",
+       "x": 2,
+       "y": 0,
+       "sub": "routes, keys, policy"
+      },
+      {
+       "id": "sse",
+       "kind": "cloud",
+       "label": "SSE cloud",
+       "x": 5.5,
+       "y": 0,
+       "sub": "SWG, CASB, ZTNA, FWaaS"
+      },
+      {
+       "id": "mpls",
+       "kind": "cloud",
+       "label": "MPLS",
+       "x": 2,
+       "y": 1.5
+      },
+      {
+       "id": "inet",
+       "kind": "internet",
+       "label": "Internet",
+       "x": 4.5,
+       "y": 1.5
+      },
+      {
+       "id": "h1",
+       "kind": "router",
+       "label": "DC hub 1",
+       "x": 0.5,
+       "y": 3,
+       "sub": "tax systems VRF"
+      },
+      {
+       "id": "h2",
+       "kind": "router",
+       "label": "DC hub 2",
+       "x": 2,
+       "y": 3
+      },
+      {
+       "id": "b1",
+       "kind": "router",
+       "label": "Branch edge",
+       "x": 4.5,
+       "y": 3,
+       "sub": "MPLS + broadband"
+      },
+      {
+       "id": "b2",
+       "kind": "router",
+       "label": "Branch edge",
+       "x": 6.5,
+       "y": 3,
+       "sub": "broadband + 5G"
+      }
+     ],
+     "links": [
+      {
+       "a": "ctl",
+       "b": "orc",
+       "label": "control",
+       "style": "dashed"
+      },
+      {
+       "a": "h1",
+       "b": "mpls"
+      },
+      {
+       "a": "h2",
+       "b": "mpls"
+      },
+      {
+       "a": "b1",
+       "b": "mpls"
+      },
+      {
+       "a": "h2",
+       "b": "inet"
+      },
+      {
+       "a": "b1",
+       "b": "inet"
+      },
+      {
+       "a": "b2",
+       "b": "inet"
+      },
+      {
+       "a": "inet",
+       "b": "sse",
+       "label": "DIA, inspected"
+      },
+      {
+       "a": "b1",
+       "b": "b2",
+       "label": "IPsec overlay",
+       "style": "tunnel"
+      }
+     ],
+     "caption": "Every edge builds IPsec tunnels over every transport it has and measures each one. Controllers and the orchestrator steer policy but are not in the data path, and approved SaaS traffic breaks out locally through the SSE cloud instead of hairpinning to the hubs."
+    },
+    {
      "type": "flow",
      "title": "Zero-touch onboarding of an edge",
      "items": [
@@ -1399,7 +1783,7 @@ TRACK.modules.push({
       {
        "label": "SEC",
        "title": "Security policy",
-       "text": "Segmentation per VRF, edge firewalling and redirection to cloud security services."
+       "text": "Segmentation per VRF, edge firewalling and redirection to SSE cloud security (secure web gateway, CASB, ZTNA, firewall as a service). Combined with SD-WAN under one policy this is called SASE."
       },
       {
        "label": "LOC",
@@ -1532,6 +1916,61 @@ TRACK.modules.push({
      "answer": "Start with a design and pilot phase: two hub edges in the data centre, controllers in redundant locations, and a pilot of three to five sites with both MPLS and broadband. Keep separate VRFs for tax systems, general corporate traffic and guest access from day one. Allow DIA only for an approved SaaS list (collaboration and productivity suites), secured by a cloud security service or edge firewall with consistent policy; everything else continues to the data centre. Tax-collection traffic stays in its own VRF, pinned to MPLS with broadband as SLA-checked fallback, and sites migrate in waves with a rollback plan and a frozen change window around tax deadlines. Success measures: SLA compliance per class, MOS or call-quality scores for collaboration, mean time to provision a new site, WAN cost per site and zero incidents on tax systems."
     },
     {
+     "type": "chart",
+     "kind": "line",
+     "title": "Afternoon packet loss per transport against the VOICE SLA",
+     "labels": [
+      "12:00",
+      "13:00",
+      "14:00",
+      "14:20",
+      "14:40",
+      "15:00",
+      "16:00"
+     ],
+     "series": [
+      {
+       "name": "Broadband",
+       "values": [
+        0.2,
+        0.3,
+        4.0,
+        4.2,
+        3.8,
+        0.4,
+        0.3
+       ]
+      },
+      {
+       "name": "MPLS",
+       "values": [
+        0.1,
+        0.1,
+        0.1,
+        0.1,
+        0.1,
+        0.1,
+        0.1
+       ]
+      },
+      {
+       "name": "VOICE limit",
+       "values": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ]
+      }
+     ],
+     "unit": "%",
+     "yLabel": "Loss",
+     "caption": "Illustrative data matching the scenario below: broadband breaches the 1% voice limit for about an hour while MPLS stays clean. A policy that prefers broadband statically, without acting on the breach, keeps calls on the bad path."
+    },
+    {
      "type": "scenario",
      "title": "Voice still poor during broadband brownouts",
      "situation": "Branch voice calls break up every afternoon. Telemetry shows broadband loss rising to 4% for 20-minute periods while MPLS stays clean. The app-aware policy maps voice to the VOICE class with broadband preferred because it has more bandwidth. Calls are not moving. What is the most likely problem?",
@@ -1586,7 +2025,26 @@ TRACK.modules.push({
       {
        "term": "Application-aware routing",
        "def": "Steering each application to a transport path whose measured loss, latency and jitter meet the application's SLA class."
+      },
+      {
+       "term": "SASE",
+       "def": "Secure access service edge: WAN connectivity (SD-WAN) and network security delivered together as a cloud service with one identity-based policy."
+      },
+      {
+       "term": "SSE",
+       "def": "Security service edge: the security half of SASE, combining secure web gateway, CASB, zero-trust network access and firewall as a service."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "SD-WAN separates orchestration, control and data planes; controllers are not in the forwarding path.",
+      "Application-aware routing steers each app to a path that meets every threshold of its SLA class.",
+      "Direct internet access works safely only with consistent SSE or edge security at every site.",
+      "Use hysteresis and SLA-driven fallback rather than static path preference.",
+      "Roll out in waves with a pilot, per-VRF protection of critical systems and a rollback plan."
      ]
     },
     {
@@ -1709,6 +2167,49 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "chart",
+     "kind": "line",
+     "title": "Free-space path loss by distance and band",
+     "labels": [
+      "5 m",
+      "10 m",
+      "20 m",
+      "40 m"
+     ],
+     "series": [
+      {
+       "name": "2.4 GHz (ch 6)",
+       "values": [
+        54.2,
+        60.2,
+        66.2,
+        72.2
+       ]
+      },
+      {
+       "name": "5 GHz (ch 100)",
+       "values": [
+        61.2,
+        67.2,
+        73.3,
+        79.3
+       ]
+      },
+      {
+       "name": "6 GHz (ch 37)",
+       "values": [
+        62.2,
+        68.2,
+        74.2,
+        80.2
+       ]
+      }
+     ],
+     "unit": " dB",
+     "yLabel": "Path loss",
+     "caption": "Calculated with the FSPL formula above, before any walls. Every doubling of distance adds about 6 dB, and 5 or 6 GHz loses roughly 7–8 dB more than 2.4 GHz over the same distance, which is why higher bands need denser AP placement."
+    },
+    {
      "type": "table",
      "head": [
       "Band",
@@ -1737,6 +2238,57 @@ TRACK.modules.push({
       ]
      ],
      "title": "The three enterprise bands"
+    },
+    {
+     "type": "chart",
+     "kind": "bar",
+     "title": "Non-overlapping channels by width",
+     "labels": [
+      "20 MHz",
+      "40 MHz",
+      "80 MHz",
+      "160 MHz",
+      "320 MHz"
+     ],
+     "series": [
+      {
+       "name": "2.4 GHz",
+       "values": [
+        3,
+        1,
+        0,
+        0,
+        0
+       ]
+      },
+      {
+       "name": "5 GHz",
+       "values": [
+        25,
+        12,
+        6,
+        2,
+        0
+       ]
+      },
+      {
+       "name": "6 GHz",
+       "values": [
+        59,
+        29,
+        14,
+        7,
+        3
+       ]
+      }
+     ],
+     "caption": "Counts for a regulatory domain that allows the full 6 GHz band and all 5 GHz channels including DFS; many regions allow fewer. Doubling channel width halves the channels available for reuse, which is the core trade-off in dense designs."
+    },
+    {
+     "type": "callout",
+     "kind": "pro",
+     "title": "6 GHz power classes",
+     "text": "Most enterprise 6 GHz APs run as **low-power indoor** devices. Where regulators permit it, **standard-power** operation (higher power, also outdoors) requires the AP to check with an **automated frequency coordination (AFC)** service so it avoids incumbent links. Rules and allowed sub-bands differ by country and keep evolving: check your regulator before you design for standard power."
     },
     {
      "type": "table",
@@ -1940,6 +2492,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Gains and losses in dB add; every doubling of distance costs about 6 dB.",
+      "Set targets per use case (for example −67 dBm and 25 dB SNR for voice) and prove them with a validation survey.",
+      "Narrow channels and sensible power beat wide channels and maximum power in dense spaces.",
+      "Measure on site wherever materials are unusual; predictive models are only as good as their wall data."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -2088,6 +2650,129 @@ TRACK.modules.push({
      "title": "Architecture options"
     },
     {
+     "type": "topology",
+     "title": "Central tunnelling and local switching side by side",
+     "nodes": [
+      {
+       "id": "wlc",
+       "kind": "controller",
+       "label": "WLC pair",
+       "x": 1,
+       "y": 0,
+       "sub": "HA with state sync"
+      },
+      {
+       "id": "rad",
+       "kind": "idp",
+       "label": "RADIUS",
+       "x": 3,
+       "y": 0,
+       "sub": "802.1X policy"
+      },
+      {
+       "id": "core",
+       "kind": "l3switch",
+       "label": "Core",
+       "x": 2,
+       "y": 1.5
+      },
+      {
+       "id": "sw",
+       "kind": "switch",
+       "label": "SW-ACC3",
+       "x": 1,
+       "y": 3
+      },
+      {
+       "id": "ap1",
+       "kind": "ap",
+       "label": "AP-3F-08",
+       "x": 0,
+       "y": 4.5,
+       "sub": "central tunnelling"
+      },
+      {
+       "id": "ap2",
+       "kind": "ap",
+       "label": "AP-3F-07",
+       "x": 2,
+       "y": 4.5,
+       "sub": "local switching"
+      },
+      {
+       "id": "wan",
+       "kind": "cloud",
+       "label": "WAN / SD-WAN",
+       "x": 4,
+       "y": 1.5
+      },
+      {
+       "id": "br",
+       "kind": "switch",
+       "label": "Branch switch",
+       "x": 5.5,
+       "y": 3
+      },
+      {
+       "id": "ap3",
+       "kind": "ap",
+       "label": "Branch AP",
+       "x": 5.5,
+       "y": 4.5,
+       "sub": "local switching"
+      }
+     ],
+     "links": [
+      {
+       "a": "wlc",
+       "b": "core"
+      },
+      {
+       "a": "rad",
+       "b": "core"
+      },
+      {
+       "a": "core",
+       "b": "sw"
+      },
+      {
+       "a": "sw",
+       "b": "ap1",
+       "label": "access port"
+      },
+      {
+       "a": "sw",
+       "b": "ap2",
+       "label": "trunk"
+      },
+      {
+       "a": "core",
+       "b": "wan"
+      },
+      {
+       "a": "wan",
+       "b": "br"
+      },
+      {
+       "a": "br",
+       "b": "ap3"
+      },
+      {
+       "a": "ap1",
+       "b": "wlc",
+       "label": "CAPWAP data",
+       "style": "tunnel"
+      },
+      {
+       "a": "ap3",
+       "b": "wlc",
+       "label": "control only",
+       "style": "dashed"
+      }
+     ],
+     "caption": "AP-3F-08 tunnels client traffic to the controller, so clients keep one subnet anywhere in the building. AP-3F-07 and the branch AP drop traffic onto local VLANs and send only control traffic to the controller, which avoids hairpinning across the WAN and keeps the branch working if the link fails."
+    },
+    {
      "type": "cli",
      "device": "Switch SW-ACC3 · IOS-style CLI",
      "lines": [
@@ -2140,30 +2825,64 @@ TRACK.modules.push({
      "title": "The roaming amendments"
     },
     {
-     "type": "flow",
+     "type": "sequence",
      "title": "A fast roam for a voice handset",
-     "items": [
+     "actors": [
+      "Handset",
+      "Current AP",
+      "Target AP"
+     ],
+     "steps": [
       {
-       "label": "Signal drops",
-       "text": "Handset's roaming threshold is crossed as the user walks."
+       "from": 0,
+       "to": 1,
+       "label": "802.11k neighbour req",
+       "note": "signal below roam threshold"
       },
       {
-       "label": "Neighbour list",
-       "text": "802.11k report tells it which channels to scan."
+       "from": 1,
+       "to": 0,
+       "label": "Neighbour report",
+       "note": "short list of channels",
+       "reply": true
       },
       {
-       "label": "Nudge",
-       "text": "802.11v request may suggest a target AP with better load."
+       "from": 1,
+       "to": 0,
+       "label": "802.11v transition req",
+       "note": "suggests a less loaded AP"
       },
       {
-       "label": "Fast transition",
-       "text": "802.11r derives new keys during reassociation, no full EAP exchange."
+       "from": 0,
+       "to": 0,
+       "label": "Scan only listed channels"
       },
       {
-       "label": "Resume",
-       "text": "Voice resumes typically within tens of milliseconds."
+       "from": 0,
+       "to": 2,
+       "label": "FT authentication (802.11r)",
+       "note": "keys from cached hierarchy"
+      },
+      {
+       "from": 2,
+       "to": 0,
+       "label": "FT authentication response",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 2,
+       "label": "FT reassociation request"
+      },
+      {
+       "from": 2,
+       "to": 0,
+       "label": "Reassociation response",
+       "note": "no RADIUS round trip: voice resumes",
+       "reply": true
       }
-     ]
+     ],
+     "caption": "Each amendment removes one delay: 802.11k shortens the scan, 802.11v helps the client choose, and 802.11r moves key derivation into the authentication and reassociation frames so the remote RADIUS server is never contacted during the roam."
     },
     {
      "type": "formula",
@@ -2256,6 +2975,16 @@ TRACK.modules.push({
        "term": "CAPWAP",
        "def": "An IETF protocol (RFC 5415) for managing APs from a controller and optionally tunnelling client data to it."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Architectures differ in where management, control and data run; choose by roaming, WAN and survivability needs.",
+      "Clients decide when to roam; 802.11k informs, 802.11v nudges and 802.11r makes the transition fast.",
+      "Keep a client's subnet stable across the roaming domain or calls will drop.",
+      "Pilot 802.11r with every critical device type and test controller failover during working hours."
      ]
     },
     {
@@ -2369,30 +3098,75 @@ TRACK.modules.push({
      ]
     },
     {
-     "type": "flow",
-     "title": "802.1X on a WLAN, end to end",
-     "items": [
+     "type": "sequence",
+     "title": "802.1X with EAP-TLS on a WLAN",
+     "actors": [
+      "Client (supplicant)",
+      "AP or controller",
+      "RADIUS server"
+     ],
+     "steps": [
       {
-       "label": "Associate",
-       "text": "Client joins the SSID; the AP blocks all but EAP."
+       "from": 0,
+       "to": 1,
+       "label": "Associate to CORP-SECURE",
+       "note": "port open for EAP only"
       },
       {
-       "label": "EAP exchange",
-       "text": "AP or controller relays EAP to RADIUS; a TLS tunnel forms."
+       "from": 1,
+       "to": 0,
+       "label": "EAP-Request/Identity",
+       "reply": true
       },
       {
-       "label": "Mutual proof",
-       "text": "Client validates the server certificate; server validates the client certificate or credentials."
+       "from": 0,
+       "to": 1,
+       "label": "EAP-Response/Identity"
       },
       {
-       "label": "Access-Accept",
-       "text": "RADIUS returns keying material plus policy: VLAN, role or ACL."
+       "from": 1,
+       "to": 2,
+       "label": "Access-Request (EAP)"
       },
       {
+       "from": 2,
+       "to": 0,
+       "label": "TLS: server certificate",
+       "note": "relayed by the AP in EAP",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 0,
+       "label": "Check CA and server name"
+      },
+      {
+       "from": 0,
+       "to": 2,
+       "label": "TLS: client certificate",
+       "note": "relayed in Access-Request"
+      },
+      {
+       "from": 2,
+       "to": 1,
+       "label": "Access-Accept, PMK, role",
+       "note": "VLAN, role or ACL returned",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "EAP-Success",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 0,
        "label": "4-way handshake",
-       "text": "Session keys are derived and the client's traffic is encrypted."
+       "note": "session keys derived, traffic encrypted"
       }
-     ]
+     ],
+     "caption": "The client must check the server certificate (step 6) before it proves its own identity; skipping that check is what lets a look-alike SSID harvest credentials. The RADIUS server returns both the keying material and the policy for the session."
     },
     {
      "type": "table",
@@ -2480,6 +3254,99 @@ TRACK.modules.push({
        "text": "Retain association and portal logs as legal requirements demand, and no longer."
       }
      ]
+    },
+    {
+     "type": "topology",
+     "title": "Guest and staff on the same APs, never on the same network",
+     "nodes": [
+      {
+       "id": "net",
+       "kind": "internet",
+       "label": "Internet",
+       "x": 4.5,
+       "y": 0
+      },
+      {
+       "id": "fw",
+       "kind": "firewall",
+       "label": "Guest firewall",
+       "x": 4.5,
+       "y": 1.5,
+       "sub": "portal, rate limits"
+      },
+      {
+       "id": "core",
+       "kind": "l3switch",
+       "label": "Core",
+       "x": 2.5,
+       "y": 1.5,
+       "sub": "VRFs GUEST and CORP"
+      },
+      {
+       "id": "ap",
+       "kind": "ap",
+       "label": "AP",
+       "x": 1,
+       "y": 1.5,
+       "sub": "GUEST (OWE), CORP-SECURE"
+      },
+      {
+       "id": "v",
+       "kind": "phone",
+       "label": "Visitor",
+       "x": 0.5,
+       "y": 3,
+       "sub": "OWE, client isolation"
+      },
+      {
+       "id": "s",
+       "kind": "laptop",
+       "label": "Staff laptop",
+       "x": 1.5,
+       "y": 3,
+       "sub": "EAP-TLS, role STAFF"
+      },
+      {
+       "id": "apps",
+       "kind": "server",
+       "label": "Internal apps",
+       "x": 3,
+       "y": 3,
+       "sub": "VRF CORP only"
+      }
+     ],
+     "links": [
+      {
+       "a": "v",
+       "b": "ap",
+       "style": "wireless"
+      },
+      {
+       "a": "s",
+       "b": "ap",
+       "style": "wireless"
+      },
+      {
+       "a": "ap",
+       "b": "core",
+       "label": "trunk"
+      },
+      {
+       "a": "core",
+       "b": "fw",
+       "label": "VRF GUEST"
+      },
+      {
+       "a": "fw",
+       "b": "net"
+      },
+      {
+       "a": "core",
+       "b": "apps",
+       "label": "VRF CORP"
+      }
+     ],
+     "caption": "Both SSIDs share the radios, but guest traffic is placed in VRF GUEST at the first hop and its only exit is the guest firewall towards the internet. Internal applications are reachable only from VRF CORP, so no ACL mistake on a single VLAN can expose them to visitors."
     },
     {
      "type": "table",
@@ -2594,6 +3461,16 @@ TRACK.modules.push({
        "term": "WMM",
        "def": "Wi-Fi Multimedia: the four access categories (voice, video, best effort, background) that prioritise traffic over the air."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "WPA3-Enterprise requires PMF and is mandatory for enterprise SSIDs in 6 GHz.",
+      "Prefer EAP-TLS or TEAP and enforce server certificate and name validation through managed profiles.",
+      "Give guests OWE encryption, a separate VRF, isolation, rate limits and a terms portal.",
+      "Map EF to UP 6 and AF41 to UP 4, re-mark untrusted SSIDs and test with real calls."
      ]
     },
     {
@@ -2784,6 +3661,43 @@ TRACK.modules.push({
      "title": "Wi-Fi generations at a glance"
     },
     {
+     "type": "timeline",
+     "title": "Wi-Fi generations",
+     "items": [
+      {
+       "when": "2009",
+       "label": "Wi-Fi 4 (802.11n)",
+       "text": "MIMO and 40 MHz channels"
+      },
+      {
+       "when": "2013",
+       "label": "Wi-Fi 5 (802.11ac)",
+       "text": "5 GHz only, 80/160 MHz, downlink MU-MIMO"
+      },
+      {
+       "when": "2019",
+       "label": "Wi-Fi 6 (802.11ax)",
+       "text": "OFDMA, uplink MU-MIMO, target wake time"
+      },
+      {
+       "when": "2020–2021",
+       "label": "Wi-Fi 6E",
+       "text": "6 GHz opened in the first countries; WPA3 or OWE only"
+      },
+      {
+       "when": "2024",
+       "label": "Wi-Fi 7 (802.11be)",
+       "text": "certification opened; MLO, 320 MHz, 4096-QAM"
+      },
+      {
+       "when": "In development",
+       "label": "802.11bn ('Wi-Fi 8')",
+       "text": "focus on reliability and latency rather than peak speed; check the current timetable"
+      }
+     ],
+     "caption": "Years are when certified products or the first spectrum arrived, not when every client supported them. Each generation pays off only as the client fleet catches up, which is why refreshes should follow the lifecycle rather than the headlines."
+    },
+    {
      "type": "framework",
      "title": "Wi-Fi 7 features that change design",
      "items": [
@@ -2911,6 +3825,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Pick a location technique by the accuracy you need: RSSI for zones, FTM, angle of arrival or UWB for metres or less.",
+      "MAC randomisation makes device counts estimates; aggregate, anonymise and limit retention.",
+      "Wi-Fi 7 gains (MLO, wide channels, 4096-QAM) need Wi-Fi 7 clients, WPA3 and multi-gigabit, well-powered access ports.",
+      "Keep 320 MHz for low-density rooms; dense areas still need channel reuse."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -3002,6 +3926,99 @@ TRACK.modules.push({
     {
      "type": "text",
      "text": "The Assure stage of **The ZCNP Fabric** asks one question continuously: is the network doing what we designed it to do? You cannot answer it without trustworthy data. This lesson covers the three signals every network already produces (counters and state through **SNMP**, events through **syslog**, and conversations through **flow records**) and how to collect them without opening new security holes."
+    },
+    {
+     "type": "topology",
+     "title": "Where the classic monitoring signals go",
+     "nodes": [
+      {
+       "id": "r1",
+       "kind": "router",
+       "label": "R1",
+       "x": 0.5,
+       "y": 1,
+       "sub": "source Loopback0"
+      },
+      {
+       "id": "sw",
+       "kind": "switch",
+       "label": "SW1",
+       "x": 0.5,
+       "y": 3,
+       "sub": "source Vlan50"
+      },
+      {
+       "id": "mg",
+       "kind": "l3switch",
+       "label": "Management net",
+       "x": 2.5,
+       "y": 2,
+       "sub": "VRF MGMT"
+      },
+      {
+       "id": "ntp",
+       "kind": "server",
+       "label": "NTP pair",
+       "x": 4.5,
+       "y": 0,
+       "sub": "10.10.50.5 and .6"
+      },
+      {
+       "id": "nms",
+       "kind": "monitor",
+       "label": "NMS poller",
+       "x": 4.5,
+       "y": 1.33,
+       "sub": "SNMPv3 authPriv"
+      },
+      {
+       "id": "sys",
+       "kind": "siem",
+       "label": "Syslog collector",
+       "x": 4.5,
+       "y": 2.67,
+       "sub": "10.10.50.30"
+      },
+      {
+       "id": "flow",
+       "kind": "db",
+       "label": "Flow collector",
+       "x": 4.5,
+       "y": 4,
+       "sub": "IPFIX, UDP 4739"
+      }
+     ],
+     "links": [
+      {
+       "a": "r1",
+       "b": "mg"
+      },
+      {
+       "a": "sw",
+       "b": "mg"
+      },
+      {
+       "a": "mg",
+       "b": "ntp",
+       "label": "time"
+      },
+      {
+       "a": "mg",
+       "b": "nms",
+       "label": "polls, traps"
+      },
+      {
+       "a": "mg",
+       "b": "sys",
+       "label": "events"
+      },
+      {
+       "a": "mg",
+       "b": "flow",
+       "label": "flow records"
+      }
+     ],
+     "caption": "Every device sends its signals from one stable source interface across a protected management network. All four collectors depend on the NTP pair: without agreed time, counters, events and flows cannot be lined up during an incident."
     },
     {
      "type": "compare",
@@ -3234,6 +4251,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Target SNMPv3 authPriv with read-only views and source ACLs; retire clear-text v2c communities.",
+      "Send syslog from a stable source with millisecond timestamps, and never stream debug output continuously.",
+      "Use IPFIX flow records to answer who is talking to whom; multiply sampled counts by the sampling rate.",
+      "Accurate, authenticated NTP is what makes every other signal usable."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -3335,6 +4362,58 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "chart",
+     "kind": "line",
+     "title": "A 90-second burst inside one 5-minute poll",
+     "labels": [
+      "0:30",
+      "1:00",
+      "1:30",
+      "2:00",
+      "2:30",
+      "3:00",
+      "3:30",
+      "4:00",
+      "4:30",
+      "5:00"
+     ],
+     "series": [
+      {
+       "name": "30 s streamed samples",
+       "values": [
+        32,
+        35,
+        34,
+        96,
+        99,
+        97,
+        38,
+        33,
+        36,
+        34
+       ]
+      },
+      {
+       "name": "5-minute polled average",
+       "values": [
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4,
+        53.4
+       ]
+      }
+     ],
+     "unit": "%",
+     "yLabel": "Utilisation",
+     "caption": "Illustrative data: the link is saturated for 90 seconds, yet the 5-minute poll reports about 53.4% and raises no alarm. Streamed samples at 10–30 s show the burst and when it happened."
+    },
+    {
      "type": "layers",
      "title": "A telemetry stack",
      "items": [
@@ -3391,6 +4470,66 @@ TRACK.modules.push({
      ],
      "title": "Dial-in subscriptions to OpenConfig paths",
      "note": "Counters suit periodic sampling; state such as BGP session status suits on-change, so you learn of a drop within seconds without streaming unchanged values."
+    },
+    {
+     "type": "sequence",
+     "title": "A gNMI dial-in subscription",
+     "actors": [
+      "leaf1 (gNMI target)",
+      "Collector",
+      "Time-series DB"
+     ],
+     "steps": [
+      {
+       "from": 1,
+       "to": 0,
+       "label": "Capabilities request",
+       "note": "gRPC over TLS, port 57400"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "Models and encodings",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 0,
+       "label": "SubscribeRequest STREAM",
+       "note": "sample 10 s; on-change BGP"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "Full state, then sync",
+       "note": "sync_response marks the end",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "Counters every 10 s",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 2,
+       "label": "Write tagged points"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "On-change: BGP IDLE",
+       "note": "seconds after the drop",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 1,
+       "label": "Alert rule fires"
+      }
+     ],
+     "caption": "The collector opens one long-lived stream per device; after the initial full state it receives only samples and changes. Compare this with polling, where the collector must ask again and again and still misses what happens between polls."
     },
     {
      "type": "table",
@@ -3567,6 +4706,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Streaming telemetry pushes model-based data at seconds-level cadence or on change, over gRPC with TLS.",
+      "Sample counters every 10–30 s; subscribe to neighbour and interface state on change.",
+      "Synthetic probes measure what users experience, even when no user is active.",
+      "Pin probe targets to the path they test, and mark probes like the traffic they represent."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -3644,38 +4793,40 @@ TRACK.modules.push({
      "text": "Senior engineers are not faster because they know more commands. They are faster because they follow a method: they define the problem precisely, gather facts before forming opinions, test one hypothesis at a time and leave a trail others can follow. At ZCNP level, the network spans VRFs, tunnels, fabrics and wireless, so a method matters even more."
     },
     {
-     "type": "flow",
+     "type": "cycle",
      "title": "The structured troubleshooting cycle",
+     "center": "Evidence over opinion",
      "items": [
       {
        "label": "Define",
-       "text": "Who is affected, what exactly fails, since when, what changed?"
+       "text": "who is affected, what exactly fails, since when, what changed?"
       },
       {
        "label": "Gather",
-       "text": "Collect facts: telemetry, logs, configs, traces, baselines."
+       "text": "collect facts: telemetry, logs, configs, traces, baselines"
       },
       {
        "label": "Analyse",
-       "text": "Compare with the baseline and with working cases."
+       "text": "compare with the baseline and with working cases"
       },
       {
        "label": "Hypothesise",
-       "text": "Rank likely causes; pick the most likely and cheapest to test."
+       "text": "rank likely causes; pick the most likely and cheapest to test"
       },
       {
        "label": "Test and fix",
-       "text": "Change one thing, with a rollback ready."
+       "text": "change one thing, with a rollback ready"
       },
       {
        "label": "Verify",
-       "text": "Confirm the original symptom is gone and nothing else broke."
+       "text": "confirm the original symptom is gone and nothing else broke"
       },
       {
        "label": "Document",
-       "text": "Record cause, fix and prevention; update runbooks and monitoring."
+       "text": "record cause, fix and prevention; update runbooks and monitoring"
       }
-     ]
+     ],
+     "caption": "Documentation closes the loop: each incident should leave behind a better runbook, a new alert or a test, so the next one is shorter. If a test or fix fails, go back to analysis rather than piling on changes."
     },
     {
      "type": "table",
@@ -3775,6 +4926,12 @@ TRACK.modules.push({
      "title": "One change at a time, with a way back"
     },
     {
+     "type": "callout",
+     "kind": "insight",
+     "title": "AI-assisted assurance, human-verified",
+     "text": "Assurance platforms increasingly add machine-learned baselines, anomaly detection and natural-language incident summaries. Treat their output as a **hypothesis generator**: it can rank suspects and assemble evidence quickly, but it can be wrong with confidence. Verify every suggestion against telemetry, logs and configuration before acting, keep a human approving any change, and record which suggestions proved right so you know how far to trust the tool."
+    },
+    {
      "type": "table",
      "head": [
       "Symptom",
@@ -3867,6 +5024,16 @@ TRACK.modules.push({
        "term": "MTTR",
        "def": "Mean time to repair: the average time from detecting a failure to restoring service."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Follow the cycle: define, gather, analyse, hypothesise, test and fix, verify, document.",
+      "Choose the approach from the symptom: bottom-up for one device, top-down for one app, follow the path for multi-hop.",
+      "Always test the path in both directions and in the correct VRF.",
+      "Change one thing at a time with a rollback ready, and treat AI suggestions as hypotheses to verify."
      ]
     },
     {
@@ -3978,34 +5145,74 @@ TRACK.modules.push({
      ]
     },
     {
-     "type": "flow",
-     "title": "What happens when a device plugs in",
-     "items": [
+     "type": "sequence",
+     "title": "A printer plugs in: 802.1X, MAB fallback and CoA",
+     "actors": [
+      "Printer",
+      "Access switch",
+      "RADIUS server"
+     ],
+     "steps": [
       {
+       "from": 0,
+       "to": 1,
        "label": "Link up",
-       "text": "Port allows only EAPOL (and anything a pre-auth ACL permits)."
+       "note": "port allows EAPOL only"
       },
       {
-       "label": "Try 802.1X",
-       "text": "Switch sends EAP identity requests."
+       "from": 1,
+       "to": 0,
+       "label": "EAP-Request/Identity",
+       "note": "repeated every tx-period"
       },
       {
-       "label": "Fallback",
-       "text": "No supplicant answers in time: switch tries MAB with the MAC as identity."
+       "from": 1,
+       "to": 0,
+       "label": "EAP-Request/Identity",
+       "note": "no supplicant answers"
       },
       {
-       "label": "Decide",
-       "text": "RADIUS matches identity, profile and posture to a policy."
+       "from": 1,
+       "to": 1,
+       "label": "Fall back to MAB"
       },
       {
-       "label": "Enforce",
-       "text": "Switch applies the returned VLAN, ACL or group tag."
+       "from": 1,
+       "to": 2,
+       "label": "Access-Request (MAC)",
+       "note": "identity = MAC address"
       },
       {
-       "label": "Adapt",
-       "text": "Change of authorisation (CoA) can re-assign policy later."
+       "from": 2,
+       "to": 2,
+       "label": "Profile match: printer"
+      },
+      {
+       "from": 2,
+       "to": 1,
+       "label": "Access-Accept + policy",
+       "note": "VLAN, ACL or group tag",
+       "reply": true
+      },
+      {
+       "from": 1,
+       "to": 1,
+       "label": "Apply policy, open port"
+      },
+      {
+       "from": 2,
+       "to": 1,
+       "label": "CoA: reauthenticate",
+       "note": "profile changed (RFC 5176)"
+      },
+      {
+       "from": 1,
+       "to": 2,
+       "label": "CoA-ACK",
+       "reply": true
       }
-     ]
+     ],
+     "caption": "A device with a supplicant would answer step 2 and complete EAP instead. The short tx-period controls how long the printer waits before MAB starts, and CoA lets the policy server change the session later without anyone touching the switch."
     },
     {
      "type": "cli",
@@ -4173,6 +5380,12 @@ TRACK.modules.push({
      "title": "MAB is not authentication"
     },
     {
+     "type": "callout",
+     "kind": "pro",
+     "title": "Protect RADIUS itself",
+     "text": "Classic RADIUS over UDP relies on an MD5-based shared secret. After the 2024 'BlastRADIUS' disclosure showed that responses could be forged by an on-path attacker, the recommended mitigations are to require the Message-Authenticator attribute on every request and response, apply vendor patches, and move RADIUS traffic onto TLS (RADIUS over TLS, also called RadSec) or an isolated management network. Treat your NAC traffic as critical infrastructure."
+    },
+    {
      "type": "scenario",
      "title": "Printers vanished after enforcement",
      "situation": "After moving a floor from monitor to closed mode, every network printer is offline. 802.1X laptops work. Logs show printers time out on 802.1X and never try MAB within the switch's limits. What is the best fix?",
@@ -4214,6 +5427,16 @@ TRACK.modules.push({
        "term": "Change of Authorisation (CoA)",
        "def": "A RADIUS message (RFC 5176) from the policy server that changes or ends an existing session's authorisation."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "802.1X roles: supplicant, authenticator and RADIUS server, which returns policy as well as a decision.",
+      "MAB proves only a MAC address: profile those devices and give them narrow access.",
+      "Roll out in phases: monitor, fix gaps, low-impact, then closed where risk justifies it.",
+      "Use CoA for dynamic changes, and harden RADIUS with Message-Authenticator and TLS transport."
      ]
     },
     {
@@ -4322,6 +5545,88 @@ TRACK.modules.push({
        ]
       }
      ]
+    },
+    {
+     "type": "topology",
+     "title": "Where the iACL and CoPP act",
+     "nodes": [
+      {
+       "id": "att",
+       "kind": "attacker",
+       "label": "Flood source",
+       "x": 1,
+       "y": 0,
+       "sub": "spoofed or botnet"
+      },
+      {
+       "id": "isp",
+       "kind": "router",
+       "label": "ISP-A",
+       "x": 4,
+       "y": 0,
+       "sub": "203.0.113.1"
+      },
+      {
+       "id": "edge",
+       "kind": "router",
+       "label": "R-EDGE1",
+       "x": 2.5,
+       "y": 1.5,
+       "sub": "IACL-IN on Gi0/0"
+      },
+      {
+       "id": "core",
+       "kind": "router",
+       "label": "R1",
+       "x": 2.5,
+       "y": 3,
+       "sub": "CoPP on control plane"
+      },
+      {
+       "id": "noc",
+       "kind": "monitor",
+       "label": "NOC",
+       "x": 4.5,
+       "y": 3,
+       "sub": "10.10.50.0/24"
+      },
+      {
+       "id": "srv",
+       "kind": "server",
+       "label": "Transit services",
+       "x": 1,
+       "y": 4.5,
+       "sub": "customer traffic"
+      }
+     ],
+     "links": [
+      {
+       "a": "att",
+       "b": "edge",
+       "label": "to 198.51.100.x: denied",
+       "style": "attack"
+      },
+      {
+       "a": "isp",
+       "b": "edge",
+       "label": "eBGP: permitted"
+      },
+      {
+       "a": "edge",
+       "b": "core"
+      },
+      {
+       "a": "noc",
+       "b": "core",
+       "label": "SSH, SNMPv3"
+      },
+      {
+       "a": "core",
+       "b": "srv",
+       "label": "transit"
+      }
+     ],
+     "caption": "The infrastructure ACL drops traffic aimed at device addresses at the border while letting transit traffic and the BGP session through. Whatever still reaches a CPU, including traffic from inside, meets CoPP, which keeps routing protocols alive under load."
     },
     {
      "type": "cli",
@@ -4507,6 +5812,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Protect each plane separately: management access, control-plane protocols and data-plane filtering.",
+      "Roll out CoPP by inventory, classification and baselining before enforcing drops, and watch class-default.",
+      "Use an infrastructure ACL at the edge to shield device addresses while permitting transit and required protocols.",
+      "Keep a hardening baseline in version control and check every device against it automatically."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -4668,6 +5983,40 @@ TRACK.modules.push({
      "note": "A container groups data, a list holds keyed entries, and leaves carry typed values with constraints the device enforces before accepting a change."
     },
     {
+     "type": "tree",
+     "title": "The zz-vlans model as a tree",
+     "root": {
+      "label": "module zz-vlans",
+      "text": "namespace urn:example:zz-vlans",
+      "children": [
+       {
+        "label": "container vlans",
+        "children": [
+         {
+          "label": "list vlan [id]",
+          "text": "one entry per VLAN",
+          "children": [
+           {
+            "label": "leaf id",
+            "text": "uint16, 1..4094, key"
+           },
+           {
+            "label": "leaf name",
+            "text": "string, 1..32"
+           },
+           {
+            "label": "leaf enabled",
+            "text": "boolean, default true"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "caption": "Every path an API uses comes from this hierarchy: module, container, keyed list, then typed leaves. A request for VLAN 5000 or a 40-character name is rejected by the device before it touches the configuration."
+    },
+    {
      "type": "cli",
      "device": "Automation host · pyang",
      "lines": [
@@ -4723,34 +6072,72 @@ TRACK.modules.push({
      ]
     },
     {
-     "type": "flow",
+     "type": "sequence",
      "title": "A safe NETCONF transaction",
-     "items": [
+     "actors": [
+      "Automation host",
+      "Router (NETCONF server)"
+     ],
+     "steps": [
       {
-       "label": "Hello",
-       "text": "Exchange capabilities; confirm candidate and confirmed-commit support."
+       "from": 0,
+       "to": 1,
+       "label": "<hello> + capabilities",
+       "note": "SSH subsystem, port 830"
       },
       {
-       "label": "Lock",
-       "text": "Lock the candidate datastore so no one else changes it."
+       "from": 1,
+       "to": 0,
+       "label": "<hello> + capabilities",
+       "note": ":candidate, :confirmed-commit",
+       "reply": true
       },
       {
-       "label": "Edit",
-       "text": "edit-config into candidate with the desired data."
+       "from": 0,
+       "to": 1,
+       "label": "<lock> candidate"
       },
       {
-       "label": "Validate",
-       "text": "Ask the device to validate the candidate."
+       "from": 0,
+       "to": 1,
+       "label": "<edit-config> candidate"
       },
       {
-       "label": "Confirmed commit",
-       "text": "Commit with a timeout; it rolls back unless confirmed."
+       "from": 0,
+       "to": 1,
+       "label": "<validate> candidate"
       },
       {
-       "label": "Confirm and unlock",
-       "text": "Run post-checks, confirm, then release the lock."
+       "from": 1,
+       "to": 0,
+       "label": "<rpc-reply><ok/>",
+       "note": "returned after each RPC",
+       "reply": true
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "<commit><confirmed/>",
+       "note": "confirm-timeout 120 s"
+      },
+      {
+       "from": 0,
+       "to": 0,
+       "label": "Post-checks: BGP, routes, probes"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "<commit/> to confirm",
+       "note": "otherwise the router rolls back"
+      },
+      {
+       "from": 0,
+       "to": 1,
+       "label": "<unlock> candidate"
       }
-     ]
+     ],
+     "caption": "The lock stops anyone else editing the candidate mid-change, validate catches model errors before commit, and the confirmed commit is the safety net: if the post-checks fail or the host loses access, the router reverts on its own."
     },
     {
      "type": "cli",
@@ -4891,6 +6278,16 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "YANG defines the structure, types and constraints that devices enforce on API requests.",
+      "NETCONF suits transactional configuration with candidate, validate and confirmed commit.",
+      "RESTCONF maps YANG paths to HTTPS URLs; percent-encode reserved characters in keys.",
+      "gNMI offers Get, Set and Subscribe over gRPC and is the natural fit for streaming telemetry."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -4998,6 +6395,45 @@ TRACK.modules.push({
        ]
       }
      ]
+    },
+    {
+     "type": "matrix",
+     "title": "Choosing an automation approach",
+     "x": "Programmable interfaces on the devices",
+     "y": "Number of devices and how often the task repeats",
+     "quadrants": [
+      {
+       "title": "Ansible with CLI modules",
+       "items": [
+        "Parsed show output",
+        "Templates from data",
+        "Check and diff where supported"
+       ]
+      },
+      {
+       "title": "Pipeline-driven API automation",
+       "items": [
+        "Ansible or Python over NETCONF, RESTCONF, gNMI",
+        "Intent data in Git",
+        "Tests and canary waves"
+       ]
+      },
+      {
+       "title": "Read-only SSH scripts",
+       "items": [
+        "Collect and parse state",
+        "Build inventory and baselines first"
+       ]
+      },
+      {
+       "title": "Python with API clients",
+       "items": [
+        "Targeted tasks",
+        "Structured data in and out"
+       ]
+      }
+     ],
+     "caption": "Start in the bottom-left with read-only collection, which is safe and builds the inventory you will need anyway. Move up as the task repeats across more devices, and right as platforms expose model-driven APIs."
     },
     {
      "type": "cli",
@@ -5173,6 +6609,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Automate with data: inventories, variables and templates, not hard-coded commands.",
+      "Make every task idempotent by comparing intended and current state before changing anything.",
+      "Inject secrets at run time from a vault or environment, never from Git.",
+      "Preview with check and diff, start with a canary, and assert the resulting state.",
+      "Idempotent is not safe on its own: review, test and roll out in waves."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -5280,6 +6727,113 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "topology",
+     "title": "NetDevOps toolchain around a source of truth",
+     "nodes": [
+      {
+       "id": "git",
+       "kind": "doc",
+       "label": "Git repository",
+       "x": 1,
+       "y": 0,
+       "sub": "templates, tests, pipeline"
+      },
+      {
+       "id": "sot",
+       "kind": "db",
+       "label": "Source of truth",
+       "x": 3,
+       "y": 0,
+       "sub": "IPAM and inventory data"
+      },
+      {
+       "id": "vault",
+       "kind": "vault",
+       "label": "Secrets vault",
+       "x": 5,
+       "y": 0,
+       "sub": "credentials at run time"
+      },
+      {
+       "id": "ci",
+       "kind": "process",
+       "label": "CI runner",
+       "x": 3,
+       "y": 1.5,
+       "sub": "lint, render, test"
+      },
+      {
+       "id": "lab",
+       "kind": "cloud",
+       "label": "Virtual lab",
+       "x": 1,
+       "y": 3,
+       "sub": "same software as prod"
+      },
+      {
+       "id": "prod",
+       "kind": "router",
+       "label": "Production",
+       "x": 5,
+       "y": 3,
+       "sub": "canary, then waves"
+      },
+      {
+       "id": "tel",
+       "kind": "monitor",
+       "label": "Telemetry",
+       "x": 3,
+       "y": 4.5,
+       "sub": "pre and post checks"
+      }
+     ],
+     "links": [
+      {
+       "a": "git",
+       "b": "ci",
+       "label": "merge request"
+      },
+      {
+       "a": "sot",
+       "b": "ci",
+       "label": "intent data"
+      },
+      {
+       "a": "vault",
+       "b": "ci",
+       "label": "secrets",
+       "style": "dashed"
+      },
+      {
+       "a": "ci",
+       "b": "lab",
+       "label": "deploy + checks"
+      },
+      {
+       "a": "ci",
+       "b": "prod",
+       "label": "NETCONF / gNMI"
+      },
+      {
+       "a": "prod",
+       "b": "tel",
+       "label": "streams"
+      },
+      {
+       "a": "lab",
+       "b": "tel",
+       "label": "streams"
+      },
+      {
+       "a": "tel",
+       "b": "ci",
+       "label": "check results",
+       "style": "dashed"
+      }
+     ],
+     "caption": "Engineers change data and templates in Git, never devices. The runner pulls intent from the source of truth and secrets from the vault, proves the change in the lab, then pushes it to production in waves while telemetry decides whether each wave passes."
+    },
+    {
      "type": "cli",
      "device": "Engineer workstation · Git",
      "lines": [
@@ -5297,34 +6851,44 @@ TRACK.modules.push({
      "note": "The change ID in the branch and commit message links code, ticket and pipeline evidence together."
     },
     {
-     "type": "flow",
-     "title": "A network CI/CD pipeline",
+     "type": "cycle",
+     "title": "The NetDevOps pipeline as a loop",
+     "center": "Intent in Git",
      "items": [
       {
+       "label": "Branch and commit",
+       "text": "change data or templates with a change ID"
+      },
+      {
        "label": "Lint",
-       "text": "YAML, templates and playbooks checked for syntax and style."
+       "text": "YAML, templates and playbooks checked for syntax and style"
       },
       {
        "label": "Render and test",
-       "text": "Configurations rendered; unit tests check intent rules."
+       "text": "configurations rendered; unit tests check intent rules"
       },
       {
        "label": "Model and lab",
-       "text": "Offline analysis of rendered configs, then deployment to a virtual lab."
+       "text": "offline analysis, then deployment to a virtual lab"
       },
       {
        "label": "Review and approve",
-       "text": "Peer review plus change approval for production."
+       "text": "peer review plus change approval for production"
       },
       {
-       "label": "Pre-check and canary",
-       "text": "Verify current state, deploy to a small set of devices."
+       "label": "Canary deploy",
+       "text": "pre-checks, then a small set of devices"
       },
       {
        "label": "Post-check and expand",
-       "text": "Verify, then roll out in waves; roll back automatically on failure."
+       "text": "verify, roll out in waves, roll back automatically on failure"
+      },
+      {
+       "label": "Detect drift",
+       "text": "compare live configuration with intent and feed findings back"
       }
-     ]
+     ],
+     "caption": "The loop never ends at deployment: drift reports and post-check failures become the next commits, so the source of truth and the network converge over time."
     },
     {
      "type": "cli",
@@ -5503,6 +7067,17 @@ TRACK.modules.push({
      ]
     },
     {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Intent data and templates in Git are the source of truth; devices change only through the pipeline.",
+      "Test at every level: static, intent, model, lab and live pre- and post-checks.",
+      "Deploy in canary waves and roll back automatically when a post-check fails.",
+      "Never bypass a failing gate; fix the data or formally change the rule.",
+      "Measure lead time, change failure rate, time to restore and drift."
+     ]
+    },
+    {
      "type": "quiz",
      "items": [
       {
@@ -5580,34 +7155,36 @@ TRACK.modules.push({
      "text": "Assurance tells you something happened; automation can respond. **Event-driven automation** connects the two: a telemetry alert, syslog message or ticket triggers a workflow that gathers context, decides what to do and acts or asks for approval. AI assistance is increasingly part of that loop, summarising evidence and suggesting actions. Both multiply the speed of operations, and both multiply mistakes unless they are bounded by clear guardrails."
     },
     {
-     "type": "flow",
+     "type": "cycle",
      "title": "The closed loop",
+     "center": "Kill switch and rate limits",
      "items": [
       {
        "label": "Detect",
-       "text": "Telemetry, syslog, probes or tickets raise an event."
+       "text": "telemetry, syslog, probes or tickets raise an event"
       },
       {
        "label": "Enrich",
-       "text": "Add context: device role, recent changes, topology, open incidents."
+       "text": "add context: device role, recent changes, topology, open incidents"
       },
       {
        "label": "Decide",
-       "text": "Rules (and optionally AI-generated suggestions) choose an action."
+       "text": "rules (and optionally AI-generated suggestions) choose an action"
       },
       {
        "label": "Act",
-       "text": "Run diagnostics automatically; run changes per approval policy."
+       "text": "run diagnostics automatically; run changes per approval policy"
       },
       {
        "label": "Verify",
-       "text": "Confirm the outcome with fresh data."
+       "text": "confirm the outcome with fresh data"
       },
       {
        "label": "Record",
-       "text": "Update the ticket with evidence and actions taken."
+       "text": "update the ticket with evidence and actions taken"
       }
-     ]
+     ],
+     "caption": "Every turn of the loop must end in verification and a record, otherwise automation cannot learn which actions worked. The kill switch in the middle stops every workflow at once."
     },
     {
      "type": "cli",
@@ -5669,6 +7246,44 @@ TRACK.modules.push({
       ]
      ],
      "title": "What may run automatically?"
+    },
+    {
+     "type": "matrix",
+     "title": "Deciding how far to automate an action",
+     "x": "Blast radius if the action is wrong",
+     "y": "Confidence in the diagnosis",
+     "quadrants": [
+      {
+       "title": "Automate with pre-checks",
+       "items": [
+        "Re-enable a port after approved maintenance",
+        "Restart a stuck telemetry agent"
+       ]
+      },
+      {
+       "title": "Automate, human approves",
+       "items": [
+        "Overwrite drifted config from intent",
+        "Change path preference"
+       ]
+      },
+      {
+       "title": "Automate diagnostics only",
+       "items": [
+        "Collect logs and counters",
+        "Open and enrich a ticket"
+       ]
+      },
+      {
+       "title": "Human decides and acts",
+       "items": [
+        "Shut an uplink",
+        "Clear BGP sessions",
+        "Change routing policy"
+       ]
+      }
+     ],
+     "caption": "Most new workflows start in the bottom row. An action moves up only when evidence shows the diagnosis is reliable, and moves left only when guardrails make a wrong action cheap to undo."
     },
     {
      "type": "framework",
@@ -5765,6 +7380,12 @@ TRACK.modules.push({
      "title": "Automation amplifies"
     },
     {
+     "type": "callout",
+     "kind": "pro",
+     "title": "Agentic assistants need the same guardrails",
+     "text": "Newer assistants can call tools and APIs on their own: query telemetry, read configurations, open tickets or propose merge requests. Give them their own identity with narrowly scoped, read-only credentials, an allow-list of tools, dry-run modes for anything that would change state, and an approval step before any change. Log every tool call so a human can reconstruct what the assistant did and why."
+    },
+    {
      "type": "scenario",
      "title": "Auto-remediation proposal",
      "situation": "An engineer proposes that whenever an access-switch uplink flaps more than five times in ten minutes, automation should shut the uplink and force traffic to the redundant one, with no human involved. Uplinks are dual-homed. What do you recommend?",
@@ -5806,6 +7427,16 @@ TRACK.modules.push({
        "term": "Kill switch",
        "def": "A single control that halts all automated actions immediately when something goes wrong."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Event-driven workflows detect, enrich, decide, act, verify and record.",
+      "Start with read-only actions; automate changes only with pre-checks, rate limits and a kill switch.",
+      "AI suggestions are hypotheses: ground them in your data and route changes through the pipeline.",
+      "Redact secrets and personal data, scope assistant credentials and log every action."
      ]
     },
     {
@@ -5932,34 +7563,152 @@ TRACK.modules.push({
      ]
     },
     {
-     "type": "flow",
+     "type": "topology",
      "title": "A voice call through the Fabric",
-     "items": [
+     "nodes": [
       {
-       "label": "Wireless",
-       "text": "A clinician's handset joins a WPA3-Enterprise SSID with EAP-TLS; RADIUS assigns the CLINICAL role."
+       "id": "ph",
+       "kind": "phone",
+       "label": "Ward handset",
+       "x": 0.5,
+       "y": 4.5,
+       "sub": "EAP-TLS, role CLINICAL"
       },
       {
-       "label": "Switch and Architect",
-       "text": "The AP's traffic enters the campus access layer and a resilient distribution pair."
+       "id": "ap",
+       "kind": "ap",
+       "label": "AP",
+       "x": 0.5,
+       "y": 3,
+       "sub": "WPA3-Enterprise"
       },
       {
-       "label": "Overlay",
-       "text": "Traffic sits in VRF CORP and leaves the branch over an SD-WAN tunnel chosen by the VOICE SLA class."
+       "id": "acc",
+       "kind": "switch",
+       "label": "Access switch",
+       "x": 2,
+       "y": 3
       },
       {
-       "label": "IGP and BGP",
-       "text": "Hub routing and the DC's BGP EVPN fabric deliver it to the call-control servers."
+       "id": "dist",
+       "kind": "l3switch",
+       "label": "Distribution",
+       "x": 2,
+       "y": 1.5,
+       "sub": "VRF CORP"
       },
       {
-       "label": "Assure",
-       "text": "Jitter probes and streaming telemetry confirm the SLA every minute."
+       "id": "edge",
+       "kind": "router",
+       "label": "SD-WAN edge",
+       "x": 3.5,
+       "y": 1.5,
+       "sub": "VOICE SLA class"
       },
       {
-       "label": "Program",
-       "text": "The SSID, VRF and SLA policy were all deployed from Git through the pipeline."
+       "id": "wan",
+       "kind": "cloud",
+       "label": "WAN overlay",
+       "x": 4.75,
+       "y": 0
+      },
+      {
+       "id": "hub",
+       "kind": "router",
+       "label": "DC hub",
+       "x": 6,
+       "y": 1.5
+      },
+      {
+       "id": "leaf",
+       "kind": "l3switch",
+       "label": "DC leaf",
+       "x": 6,
+       "y": 3,
+       "sub": "BGP EVPN fabric"
+      },
+      {
+       "id": "cc",
+       "kind": "server",
+       "label": "Call control",
+       "x": 6,
+       "y": 4.5
+      },
+      {
+       "id": "mon",
+       "kind": "monitor",
+       "label": "Probes",
+       "x": 3.5,
+       "y": 4.5,
+       "sub": "jitter, telemetry"
       }
-     ]
+     ],
+     "links": [
+      {
+       "a": "ph",
+       "b": "ap",
+       "style": "wireless"
+      },
+      {
+       "a": "ap",
+       "b": "acc"
+      },
+      {
+       "a": "acc",
+       "b": "dist"
+      },
+      {
+       "a": "dist",
+       "b": "edge"
+      },
+      {
+       "a": "edge",
+       "b": "wan",
+       "style": "tunnel"
+      },
+      {
+       "a": "wan",
+       "b": "hub",
+       "style": "tunnel"
+      },
+      {
+       "a": "hub",
+       "b": "leaf"
+      },
+      {
+       "a": "leaf",
+       "b": "cc"
+      },
+      {
+       "a": "mon",
+       "b": "edge",
+       "label": "probes",
+       "style": "dashed"
+      },
+      {
+       "a": "mon",
+       "b": "hub",
+       "style": "dashed"
+      }
+     ],
+     "zones": [
+      {
+       "label": "Hospital branch",
+       "x": 0,
+       "y": 1.5,
+       "w": 4,
+       "h": 3.5,
+       "tone": "accent"
+      },
+      {
+       "label": "Data centre",
+       "x": 5.5,
+       "y": 1.5,
+       "w": 1.5,
+       "h": 3.5
+      }
+     ],
+     "caption": "Wireless and NAC admit the handset, the switching and routing stages carry it resiliently in VRF CORP, the overlay picks a path that meets the VOICE SLA, and the EVPN fabric delivers it to call control. Probes prove the SLA every minute, and every setting on the path was deployed from Git through the pipeline."
     },
     {
      "type": "table",
@@ -6128,6 +7877,16 @@ TRACK.modules.push({
        "term": "Design decision log",
        "def": "A record of significant design choices, the alternatives considered, the evidence and the verification method."
       }
+     ]
+    },
+    {
+     "type": "keypoints",
+     "title": "Key takeaways",
+     "items": [
+      "Real traffic crosses every Fabric stage, so design decisions must be reviewed against all eight.",
+      "Each stage leaves an artefact that the next can verify: designs, plans, sheets, tests and runbooks.",
+      "Start the capstone from requirements and architecture, then automate a change the design really needs.",
+      "Log every significant decision with its alternatives, evidence and verification."
      ]
     },
     {

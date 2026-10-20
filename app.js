@@ -210,8 +210,17 @@
   const completeHTML = l => S.done[l.id] ? `<span class="done-banner">${icon('check')} Completed</span>` : `<button class="btn btn-primary" type="button" data-complete="${l.id}">${icon('check')} Mark lesson complete</button>`;
   const T = b => b.title ? `<h3 class="blk-title">${md(b.title)}</h3>` : '';
   const KIND = { insight: 'Insight', warning: 'Watch out', example: 'Example', pro: 'Pro tip', definition: 'Definition' };
+  /* saved answers, ticks, worksheets and notes are keyed by the block's content, not its position, so adding or moving blocks never mismatches them */
+  function bkey(l, i) {
+    const id = b => ZZ.hash(b.type + '|' + plain(b.situation || b.prompt || b.title || b.purpose || '')).slice(0, 10);
+    const me = id(l.blocks[i]); let n = 0;
+    for (let j = 0; j < i; j++) if (l.blocks[j].type === l.blocks[i].type && id(l.blocks[j]) === me) n++;
+    return l.id + ':' + me + (n ? '~' + n : '');
+  }
+  const blockAt = key => { const lid = key.split(':')[0], l = D.lessons.find(x => x.id === lid); const i = l ? l.blocks.findIndex((_, j) => bkey(l, j) === key) : -1; return i < 0 ? null : { l, i }; };
   function block(b, i, l) {
-    const key = l.id + ':' + i;
+    const key = bkey(l, i);
+    if (ZZ.FIG && ZZ.FIG[b.type]) return ZZ.figure(b, T(b));
     switch (b.type) {
       case 'text': return `<p class="b-text">${md(b.text)}</p>`;
       case 'callout': return `<aside class="callout ${esc(b.kind)}"><span class="ct">${KIND[b.kind] || ''}</span>${b.title ? `<b class="h">${md(b.title)}</b>` : ''}<div>${md(b.text)}</div></aside>`;
@@ -781,8 +790,9 @@
     const V = { home: viewHome, '': viewHome, modules: viewModules, module: viewModule, lesson: viewLesson, practice: viewPractice, cards: viewCards, glossary: viewGlossary, exam: () => EX && EX.done && EX.result ? (EX.unseen = false, examResultHTML()) : viewExam(), capstone: viewCapstone, certificate: viewCertificate, settings: viewSettings, search: viewSearch, verify: viewVerify, account: viewAccount, contact: viewContact }[r || ''] || notFound;
     view.innerHTML = V(arg); renderChrome(); if (r === 'verify') runVerify(arg); if (r === 'account') mountAccount(); if (r === 'contact') mountContact();
     const back = ev && !linkNav && scrollMem[location.hash || '#'] != null; linkNav = false;
-    window.scrollTo({ top: back ? scrollMem[location.hash || '#'] : 0, behavior: 'auto' });
-    if (ev && !reduced()) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); }
+    const to = back ? scrollMem[location.hash || '#'] : 0; if (to || scrollY) window.scrollTo({ top: to, behavior: 'auto' });
+    if (ev && !reduced() && view.animate) view.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2,.7,.2,1)' });
+    watchPulse(); markWide();
     onScroll();
     if (r === 'exam') tickExam();
     if (r === 'certificate') { drawCert(); certFonts().then(drawCert); }
@@ -792,12 +802,18 @@
   }
   function render() { const y = scrollY; route(); window.scrollTo({ top: y, behavior: 'auto' }); }
   let scrollRAF = 0;
+  /* the hero's animated signal only runs while it is on screen */
+  const pulseIO = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('sg-paused', !e.isIntersecting))) : null;
+  function watchPulse() { if (!pulseIO) return; pulseIO.disconnect(); new Set($$('.sg-pulse').map(p => p.ownerSVGElement).filter(Boolean)).forEach(s => pulseIO.observe(s)); }
+  /* diagrams wider than the screen scroll sideways; mark them so a swipe hint shows */
+  function markWide() { $$('.fig-scroll').forEach(x => x.classList.toggle('more', x.scrollWidth > x.clientWidth + 4)); }
+  let wideT = 0; addEventListener('resize', () => { clearTimeout(wideT); wideT = setTimeout(markWide, 150); }, { passive: true });
   function onScroll() {
     if (scrollRAF) return;
     scrollRAF = requestAnimationFrame(() => {
       scrollRAF = 0; const p = $('#readBar');
-      if (!location.hash.startsWith('#lesson/')) { if (p.style.width !== '0px') p.style.width = '0'; return; }
-      const h = document.documentElement.scrollHeight - innerHeight; p.style.width = (h > 0 ? scrollY / h * 100 : 0) + '%';
+      if (!location.hash.startsWith('#lesson/')) { if (p.style.transform !== 'scaleX(0)') p.style.transform = 'scaleX(0)'; return; }
+      const h = document.documentElement.scrollHeight - innerHeight; p.style.transform = `scaleX(${h > 0 ? Math.min(1, scrollY / h).toFixed(4) : 0})`;
     });
   }
 
@@ -812,8 +828,8 @@
     const qn = t.closest('[data-qnext]'); if (qn) { quizNext(qn.dataset.qnext); return; }
     const qr = t.closest('[data-qretry]'); if (qr) { const st = quizStates[qr.dataset.qretry]; Object.assign(st, { i: 0, picked: null, right: 0, res: [] }); if (st.practice) st.items = shuffle(st.items); $('#' + qr.dataset.qretry).innerHTML = quizInner(qr.dataset.qretry); return; }
     if (t.closest('[data-reveal]')) { const b = t.closest('[data-reveal]'); const r = b.nextElementSibling; r.hidden = !r.hidden; b.textContent = r.hidden ? 'Show model answer' : 'Hide model answer'; return; }
-    const so = t.closest('[data-scopt]'); if (so) { const sec = so.closest('[data-sc]'); S.sc[sec.dataset.sc] = +so.dataset.scopt; save(); const [lid, bi] = sec.dataset.sc.split(':'); const l = D.lessons.find(x => x.id === lid); sec.outerHTML = block(l.blocks[+bi], +bi, l); return; }
-    const sr = t.closest('[data-screset]'); if (sr) { const sec = sr.closest('[data-sc]'); delete S.sc[sec.dataset.sc]; save(); const [lid, bi] = sec.dataset.sc.split(':'); const l = D.lessons.find(x => x.id === lid); sec.outerHTML = block(l.blocks[+bi], +bi, l); return; }
+    const so = t.closest('[data-scopt]'); if (so) { const sec = so.closest('[data-sc]'); S.sc[sec.dataset.sc] = +so.dataset.scopt; save(); const at = blockAt(sec.dataset.sc); if (at) sec.outerHTML = block(at.l.blocks[at.i], at.i, at.l); return; }
+    const sr = t.closest('[data-screset]'); if (sr) { const sec = sr.closest('[data-sc]'); delete S.sc[sec.dataset.sc]; save(); const at = blockAt(sec.dataset.sc); if (at) sec.outerHTML = block(at.l.blocks[at.i], at.i, at.l); return; }
     const csv = t.closest('[data-csv]'); if (csv) {
       const tb = csv.closest('.template').querySelector('table'); const rows = $$('tr', tb).map(tr => $$('th,td', tr).map(c => '"' + c.innerText.replace(/"/g, '""').trim() + '"').join(','));
       const text = rows.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Copied. Paste into a spreadsheet.'), () => toast('Copy blocked by the browser. Select the table and copy it manually.'));
