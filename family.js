@@ -15,4 +15,5 @@ window.ZZ_FAMILY = [
   { code: 'ZEPMS', name: 'Engineering Project Management Specialization', domain: 'zepms.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Engineering projects: CPM, earned value, contracts, HSE and handover.' },
   { code: 'ZITSS', name: 'IT Support Specialization', domain: 'zitss.zyeemzia.com', path: 'IT Operations', tier: 1, level: 'Associate', blurb: 'Job-ready IT support: hardware, OS, networking, troubleshooting and admin.' },
   { code: 'ZHRLS', name: 'Human Resource Management and Leadership Specialization', domain: 'zhrls.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Modern HR and people leadership: hiring, performance, pay, culture and analytics.' },
+  { code: 'TOT-IHL', name: 'Training of Trainers on International Humanitarian Law', domain: 'totihl.zyeemzia.com', path: 'Humanitarian law & peace operations', tier: 2, level: 'Professional', blurb: 'Geneva Conventions, targeting, command responsibility, peace operations and how to teach IHL.' },
 ];
