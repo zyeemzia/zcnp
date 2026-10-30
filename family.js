@@ -16,4 +16,5 @@ window.ZZ_FAMILY = [
   { code: 'ZITSS', name: 'IT Support Specialization', domain: 'zitss.zyeemzia.com', path: 'IT Operations', tier: 1, level: 'Associate', blurb: 'Job-ready IT support: hardware, OS, networking, troubleshooting and admin.' },
   { code: 'ZHRLS', name: 'Human Resource Management and Leadership Specialization', domain: 'zhrls.zyeemzia.com', path: 'Leadership', tier: 2, level: 'Professional', blurb: 'Modern HR and people leadership: hiring, performance, pay, culture and analytics.' },
   { code: 'TOT-IHL', name: 'Training of Trainers on International Humanitarian Law', domain: 'totihl.zyeemzia.com', path: 'Humanitarian law & peace operations', tier: 2, level: 'Professional', blurb: 'Geneva Conventions, targeting, command responsibility, peace operations and how to teach IHL.' },
+  { code: 'UNBD-LAW', name: 'Bangladesh Law & United Nations Law', domain: 'unbdlaw.zyeemzia.com', path: 'Humanitarian law & peace operations', tier: 2, level: 'Professional', blurb: 'Bangladesh’s legal system and Constitution, the UN Charter, human rights, peacekeeping and international law, in English, Bangla and French.' },
 ];
