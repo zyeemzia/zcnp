@@ -317,3 +317,16 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .blk { overflow-x: clip; }
 td, th { overflow-wrap: anywhere; }
 table:has(th:nth-child(7)) { font-size: 7.4pt; }
+
+/* Phone reading: the A4 pages shrink to the screen; wide tables scroll inside their box. */
+@media screen and (max-width: 700px) {
+  .page, .flow { padding: 18px 14px; margin: 10px 0; }
+  .page { min-height: 0; }
+  .ac { width: auto; }
+  .cover h1 { max-width: 100%; }
+  .c-sig .sg, .sigpage .sig-big .sg { width: 100%; max-width: 105mm; }
+  #book .c-code { font-size: clamp(36px, 15vw, 104px); }
+  #book img, #book svg { max-width: 100%; }
+  #book table, #book pre { display: block; max-width: 100%; overflow-x: auto; }
+  #book p, #book li, #book td, #book th, #book h2, #book h3 { overflow-wrap: break-word; }
+}
