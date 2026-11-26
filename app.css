@@ -317,7 +317,8 @@ a.sg-node:hover circle, a.sg-layer:hover rect { stroke-width: 3.5; }
   .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   .hero { grid-template-columns: 1fr; padding: 24px; }
   .path, .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .two { grid-template-columns: 1fr; }
+  .two { grid-template-columns: minmax(0, 1fr); }
+  .list-card .chip { white-space: normal; }
 }
 @media (max-width: 560px) {
   .mod-grid { grid-template-columns: 1fr; }
