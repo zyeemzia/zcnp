@@ -1,4 +1,6 @@
 /* ZyeemZia certification engine — site styles. Colours and faces come from theme.css (per track). */
+/* Form controls use the page font; browsers otherwise fall back to Arial. */
+button, input, select, textarea { font-family: inherit; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }

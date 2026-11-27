@@ -1,4 +1,6 @@
 /* ZyeemZia certification engine — printable book (A4). Colours and faces come from theme.css (light). */
+/* Form controls use the page font; browsers otherwise fall back to Arial. */
+button, input, select, textarea { font-family: inherit; }
 @page { size: A4; margin: 16mm 15mm 18mm 15mm;
   @bottom-center { content: counter(page); font: 700 9pt "IBM Plex Mono", monospace; color: #8a91a3; }
   @bottom-right { content: "Copyright © ZyeemZia"; font: 7.5pt "IBM Plex Sans", sans-serif; color: #8a91a3; }
