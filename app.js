@@ -651,7 +651,7 @@
   const TX_BASE = 'https://zyeemzia.com/';
   let txP = null;
   const loadTransmit = () => window.ZZTransmit ? Promise.resolve() : txP || (txP = new Promise((res, rej) => {
-    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = TX_BASE + 'transmit.css?v=5'; document.head.appendChild(l);
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = TX_BASE + 'transmit.css?v=6'; document.head.appendChild(l);
     const sc = document.createElement('script'); sc.src = TX_BASE + 'transmit.js?v=5'; sc.onload = () => res(); sc.onerror = () => { txP = null; rej(); }; document.head.appendChild(sc);
   }));
   function viewContact() {
